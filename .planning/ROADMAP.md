@@ -32,7 +32,11 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. Serial number comparisons (CmdSN, StatSN, DataSN) correctly handle wrap-around at 2^32 boundaries per RFC 1982
   4. Two goroutines (read pump and write pump) can concurrently frame PDUs over a TCP connection without data corruption, verified under -race
   5. Table-driven unit tests cover all PDU types including edge cases (zero-length data, maximum AHS, padding boundaries)
-**Plans**: TBD
+**Plans:** 3 plans
+Plans:
+- [ ] 01-01-PLAN.md — Go module init, serial arithmetic, CRC32C digest, padding helpers
+- [ ] 01-02-PLAN.md — All 24 PDU opcode types with BHS codec and round-trip tests
+- [ ] 01-03-PLAN.md — TCP transport: framing, read/write pumps, ITT router, buffer pool
 
 ### Phase 2: Connection and Login
 **Goal**: A Go application can establish an authenticated iSCSI connection with full operational parameter negotiation, including digest settings
@@ -113,7 +117,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. PDU Codec and Transport | 0/TBD | Not started | - |
+| 1. PDU Codec and Transport | 0/3 | Planning complete | - |
 | 2. Connection and Login | 0/TBD | Not started | - |
 | 3. Session, Read Path, and Discovery | 0/TBD | Not started | - |
 | 4. Write Path | 0/TBD | Not started | - |
