@@ -1,0 +1,304 @@
+package transport
+
+import (
+	"bytes"
+	"encoding/binary"
+	"io"
+	"net"
+	"testing"
+
+	"github.com/rkujawa/uiscsi/internal/pdu"
+)
+
+// makeBHS constructs a minimal 48-byte BHS with the given opcode, totalAHSLength (in 4-byte words),
+// and dataSegmentLength. All other fields are zero.
+func makeBHS(opcode pdu.OpCode, totalAHSLen uint8, dsLen uint32) [pdu.BHSLength]byte {
+	var bhs [pdu.BHSLength]byte
+	bhs[0] = byte(opcode)
+	bhs[4] = totalAHSLen
+	// 24-bit DataSegmentLength in bytes 5-7
+	bhs[5] = byte(dsLen >> 16)
+	bhs[6] = byte(dsLen >> 8)
+	bhs[7] = byte(dsLen)
+	return bhs
+}
+
+// writeRawBytes writes a hand-crafted PDU to w: BHS + AHS + optional header digest +
+// data segment + padding + optional data digest.
+func writeRawBytes(w io.Writer, bhs [pdu.BHSLength]byte, ahs []byte, data []byte, hdigest, ddigest bool) {
+	w.Write(bhs[:])
+	if len(ahs) > 0 {
+		w.Write(ahs)
+	}
+	if hdigest {
+		var hd [4]byte
+		binary.BigEndian.PutUint32(hd[:], 0xDEADBEEF) // dummy digest
+		w.Write(hd[:])
+	}
+	if len(data) > 0 {
+		w.Write(data)
+		padLen := pdu.PadLen(uint32(len(data)))
+		if padLen > 0 {
+			w.Write(make([]byte, padLen))
+		}
+	}
+	if ddigest && len(data) > 0 {
+		var dd [4]byte
+		binary.BigEndian.PutUint32(dd[:], 0xCAFEBABE) // dummy digest
+		w.Write(dd[:])
+	}
+}
+
+func TestFramerReadRawPDU_Basic(t *testing.T) {
+	rConn, wConn := net.Pipe()
+	defer rConn.Close()
+	defer wConn.Close()
+
+	data := []byte{0x01, 0x02, 0x03, 0x04, 0x05} // 5 bytes, needs 3 padding
+	bhs := makeBHS(pdu.OpNOPOut, 0, uint32(len(data)))
+
+	go writeRawBytes(wConn, bhs, nil, data, false, false)
+
+	raw, err := ReadRawPDU(rConn, false, false)
+	if err != nil {
+		t.Fatalf("ReadRawPDU: %v", err)
+	}
+	if raw.BHS != bhs {
+		t.Error("BHS mismatch")
+	}
+	if !bytes.Equal(raw.DataSegment, data) {
+		t.Errorf("data segment: got %x, want %x", raw.DataSegment, data)
+	}
+	if raw.AHS != nil {
+		t.Error("AHS should be nil")
+	}
+}
+
+func TestFramerReadRawPDU_BackToBack(t *testing.T) {
+	rConn, wConn := net.Pipe()
+	defer rConn.Close()
+	defer wConn.Close()
+
+	data1 := []byte{0xAA, 0xBB}            // 2 bytes, 2 pad
+	data2 := []byte{0xCC, 0xDD, 0xEE, 0xFF} // 4 bytes, 0 pad
+	bhs1 := makeBHS(pdu.OpNOPOut, 0, uint32(len(data1)))
+	bhs2 := makeBHS(pdu.OpNOPIn, 0, uint32(len(data2)))
+
+	go func() {
+		writeRawBytes(wConn, bhs1, nil, data1, false, false)
+		writeRawBytes(wConn, bhs2, nil, data2, false, false)
+	}()
+
+	raw1, err := ReadRawPDU(rConn, false, false)
+	if err != nil {
+		t.Fatalf("ReadRawPDU #1: %v", err)
+	}
+	if !bytes.Equal(raw1.DataSegment, data1) {
+		t.Errorf("PDU 1 data: got %x, want %x", raw1.DataSegment, data1)
+	}
+
+	raw2, err := ReadRawPDU(rConn, false, false)
+	if err != nil {
+		t.Fatalf("ReadRawPDU #2: %v", err)
+	}
+	if !bytes.Equal(raw2.DataSegment, data2) {
+		t.Errorf("PDU 2 data: got %x, want %x", raw2.DataSegment, data2)
+	}
+}
+
+func TestFramerReadRawPDU_WithAHS(t *testing.T) {
+	rConn, wConn := net.Pipe()
+	defer rConn.Close()
+	defer wConn.Close()
+
+	// AHS is 8 bytes (TotalAHSLength = 2 words)
+	ahs := []byte{0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08}
+	bhs := makeBHS(pdu.OpSCSICommand, 2, 0) // 2 words AHS, no data
+
+	go writeRawBytes(wConn, bhs, ahs, nil, false, false)
+
+	raw, err := ReadRawPDU(rConn, false, false)
+	if err != nil {
+		t.Fatalf("ReadRawPDU: %v", err)
+	}
+	if !bytes.Equal(raw.AHS, ahs) {
+		t.Errorf("AHS: got %x, want %x", raw.AHS, ahs)
+	}
+}
+
+func TestFramerReadRawPDU_HeaderDigest(t *testing.T) {
+	rConn, wConn := net.Pipe()
+	defer rConn.Close()
+	defer wConn.Close()
+
+	bhs := makeBHS(pdu.OpNOPOut, 0, 0)
+	go writeRawBytes(wConn, bhs, nil, nil, true, false)
+
+	raw, err := ReadRawPDU(rConn, true, false)
+	if err != nil {
+		t.Fatalf("ReadRawPDU: %v", err)
+	}
+	if !raw.HasHDigest {
+		t.Error("expected HasHDigest=true")
+	}
+	if raw.HeaderDigest != 0xDEADBEEF {
+		t.Errorf("header digest: got 0x%08X, want 0xDEADBEEF", raw.HeaderDigest)
+	}
+}
+
+func TestFramerReadRawPDU_DataDigest(t *testing.T) {
+	rConn, wConn := net.Pipe()
+	defer rConn.Close()
+	defer wConn.Close()
+
+	data := []byte{0x01, 0x02, 0x03} // 3 bytes, 1 pad
+	bhs := makeBHS(pdu.OpNOPOut, 0, uint32(len(data)))
+
+	go writeRawBytes(wConn, bhs, nil, data, false, true)
+
+	raw, err := ReadRawPDU(rConn, false, true)
+	if err != nil {
+		t.Fatalf("ReadRawPDU: %v", err)
+	}
+	if !raw.HasDDigest {
+		t.Error("expected HasDDigest=true")
+	}
+	if raw.DataDigest != 0xCAFEBABE {
+		t.Errorf("data digest: got 0x%08X, want 0xCAFEBABE", raw.DataDigest)
+	}
+}
+
+func TestFramerReadRawPDU_ZeroLengthData(t *testing.T) {
+	rConn, wConn := net.Pipe()
+	defer rConn.Close()
+	defer wConn.Close()
+
+	bhs := makeBHS(pdu.OpNOPOut, 0, 0)
+	go writeRawBytes(wConn, bhs, nil, nil, false, false)
+
+	raw, err := ReadRawPDU(rConn, false, false)
+	if err != nil {
+		t.Fatalf("ReadRawPDU: %v", err)
+	}
+	if len(raw.DataSegment) != 0 {
+		t.Errorf("expected empty data segment, got %d bytes", len(raw.DataSegment))
+	}
+}
+
+func TestFramerReadRawPDU_PaddingVariants(t *testing.T) {
+	tests := []struct {
+		name    string
+		dataLen int
+		padLen  int
+	}{
+		{"1 byte pad", 3, 1},
+		{"2 bytes pad", 2, 2},
+		{"3 bytes pad", 1, 3},
+		{"0 bytes pad", 4, 0},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			rConn, wConn := net.Pipe()
+			defer rConn.Close()
+			defer wConn.Close()
+
+			data := make([]byte, tt.dataLen)
+			for i := range data {
+				data[i] = byte(i + 1)
+			}
+			bhs := makeBHS(pdu.OpNOPOut, 0, uint32(tt.dataLen))
+
+			go writeRawBytes(wConn, bhs, nil, data, false, false)
+
+			raw, err := ReadRawPDU(rConn, false, false)
+			if err != nil {
+				t.Fatalf("ReadRawPDU: %v", err)
+			}
+			if !bytes.Equal(raw.DataSegment, data) {
+				t.Errorf("data: got %x, want %x", raw.DataSegment, data)
+			}
+		})
+	}
+}
+
+func TestFramerReadRawPDU_TruncatedBHS(t *testing.T) {
+	// Write only 10 bytes then close -- less than 48 byte BHS
+	rConn, wConn := net.Pipe()
+	defer rConn.Close()
+
+	go func() {
+		wConn.Write(make([]byte, 10))
+		wConn.Close()
+	}()
+
+	_, err := ReadRawPDU(rConn, false, false)
+	if err == nil {
+		t.Fatal("expected error on truncated BHS")
+	}
+}
+
+func TestFramerWriteRawPDU_RoundTrip(t *testing.T) {
+	rConn, wConn := net.Pipe()
+	defer rConn.Close()
+	defer wConn.Close()
+
+	data := []byte{0x10, 0x20, 0x30, 0x40, 0x50} // 5 bytes
+	bhs := makeBHS(pdu.OpNOPIn, 0, uint32(len(data)))
+
+	original := &RawPDU{
+		BHS:         bhs,
+		DataSegment: data,
+	}
+
+	go func() {
+		if err := WriteRawPDU(wConn, original); err != nil {
+			t.Errorf("WriteRawPDU: %v", err)
+		}
+	}()
+
+	got, err := ReadRawPDU(rConn, false, false)
+	if err != nil {
+		t.Fatalf("ReadRawPDU: %v", err)
+	}
+	if got.BHS != bhs {
+		t.Error("BHS mismatch in round trip")
+	}
+	if !bytes.Equal(got.DataSegment, data) {
+		t.Errorf("data mismatch: got %x, want %x", got.DataSegment, data)
+	}
+}
+
+func TestFramerWriteRawPDU_WithDigests(t *testing.T) {
+	rConn, wConn := net.Pipe()
+	defer rConn.Close()
+	defer wConn.Close()
+
+	data := []byte{0xAB, 0xCD}
+	bhs := makeBHS(pdu.OpNOPOut, 0, uint32(len(data)))
+
+	original := &RawPDU{
+		BHS:          bhs,
+		DataSegment:  data,
+		HeaderDigest: 0x11223344,
+		DataDigest:   0x55667788,
+		HasHDigest:   true,
+		HasDDigest:   true,
+	}
+
+	go func() {
+		if err := WriteRawPDU(wConn, original); err != nil {
+			t.Errorf("WriteRawPDU: %v", err)
+		}
+	}()
+
+	got, err := ReadRawPDU(rConn, true, true)
+	if err != nil {
+		t.Fatalf("ReadRawPDU: %v", err)
+	}
+	if got.HeaderDigest != 0x11223344 {
+		t.Errorf("header digest: got 0x%08X, want 0x11223344", got.HeaderDigest)
+	}
+	if got.DataDigest != 0x55667788 {
+		t.Errorf("data digest: got 0x%08X, want 0x55667788", got.DataDigest)
+	}
+}
