@@ -48,7 +48,11 @@ Plans:
   3. All RFC 7143 Section 13 mandatory operational parameters are negotiated correctly (HeaderDigest, DataDigest, MaxRecvDataSegmentLength, MaxBurstLength, FirstBurstLength, ImmediateData, InitialR2T, etc.)
   4. When HeaderDigest=CRC32C or DataDigest=CRC32C is negotiated, received PDUs with incorrect digests are detected and rejected
   5. Parameterized tests cover the negotiation parameter matrix (boolean AND/OR, numerical min/max, string list semantics)
-**Plans**: TBD
+**Plans:** 3 plans
+Plans:
+- [ ] 02-01-PLAN.md — Text codec, negotiation engine, NegotiatedParams, LoginError
+- [ ] 02-02-PLAN.md — CHAP authentication (one-way and mutual)
+- [ ] 02-03-PLAN.md — Login state machine, functional options, mock target tests, digest activation
 
 ### Phase 3: Session, Read Path, and Discovery
 **Goal**: A Go application can open a session, discover targets, issue SCSI read commands, and receive data with correct sequencing and flow control
@@ -60,7 +64,11 @@ Plans:
   3. NOP-Out/NOP-In keepalive works in both directions (initiator-originated ping and response to target-initiated NOP-In)
   4. SendTargets discovery enumerates available targets and their portal addresses from a discovery session
   5. Graceful logout tears down the session cleanly, and async messages from the target (including target-requested logout) are handled
-**Plans**: TBD
+**Plans:** 3 plans
+Plans:
+- [ ] 02-01-PLAN.md — Text codec, negotiation engine, NegotiatedParams, LoginError
+- [ ] 02-02-PLAN.md — CHAP authentication (one-way and mutual)
+- [ ] 02-03-PLAN.md — Login state machine, functional options, mock target tests, digest activation
 
 ### Phase 4: Write Path
 **Goal**: A Go application can write data to an iSCSI target through all write path variants with correct R2T handling and burst length enforcement
@@ -72,7 +80,11 @@ Plans:
   3. Unsolicited Data-Out works: when InitialR2T=No, initiator sends data before first R2T, bounded by FirstBurstLength
   4. All four ImmediateData x InitialR2T combinations produce correct wire behavior, verified by parameterized tests
   5. MaxOutstandingR2T is respected and MaxBurstLength is enforced for all solicited data sequences
-**Plans**: TBD
+**Plans:** 3 plans
+Plans:
+- [ ] 02-01-PLAN.md — Text codec, negotiation engine, NegotiatedParams, LoginError
+- [ ] 02-02-PLAN.md — CHAP authentication (one-way and mutual)
+- [ ] 02-03-PLAN.md — Login state machine, functional options, mock target tests, digest activation
 
 ### Phase 5: SCSI Command Layer
 **Goal**: A Go application can issue all core and extended SCSI commands with structured CDB building and response parsing, including sense data interpretation
@@ -84,7 +96,11 @@ Plans:
   3. Sense data in both fixed and descriptor formats is parsed with correct sense key, ASC/ASCQ classification
   4. Extended SCSI commands (SYNCHRONIZE CACHE, WRITE SAME, UNMAP, VERIFY, PERSISTENT RESERVE IN/OUT, COMPARE AND WRITE, START STOP UNIT) produce valid CDBs
   5. All CDB builders can be verified with round-trip tests independent of a live iSCSI target
-**Plans**: TBD
+**Plans:** 3 plans
+Plans:
+- [ ] 02-01-PLAN.md — Text codec, negotiation engine, NegotiatedParams, LoginError
+- [ ] 02-02-PLAN.md — CHAP authentication (one-way and mutual)
+- [ ] 02-03-PLAN.md — Login state machine, functional options, mock target tests, digest activation
 
 ### Phase 6: Error Recovery and Task Management
 **Goal**: A Go application can recover from connection failures at all three error recovery levels and manage outstanding tasks
@@ -96,7 +112,11 @@ Plans:
   3. ERL 2: a failed connection within a session can be replaced and tasks reassigned to the new connection
   4. All six task management functions (ABORT TASK, ABORT TASK SET, LUN RESET, TARGET WARM RESET, TARGET COLD RESET, CLEAR TASK SET) send correct TMF requests and process responses
   5. Error injection tests verify recovery behavior under simulated connection failures, timeout scenarios, and digest errors
-**Plans**: TBD
+**Plans:** 3 plans
+Plans:
+- [ ] 02-01-PLAN.md — Text codec, negotiation engine, NegotiatedParams, LoginError
+- [ ] 02-02-PLAN.md — CHAP authentication (one-way and mutual)
+- [ ] 02-03-PLAN.md — Login state machine, functional options, mock target tests, digest activation
 
 ### Phase 7: Public API, Observability, and Release
 **Goal**: Library consumers can use a clean, Go-idiomatic API with both high-level convenience and low-level control, backed by observability and comprehensive documentation
@@ -108,7 +128,11 @@ Plans:
   3. All operations accept context.Context for cancellation and timeouts, and block I/O exposes io.Reader/io.Writer where natural
   4. Connection statistics (latency, throughput, error counts), structured slog logging, and state transition callbacks are available to consumers
   5. IOL-inspired conformance test suite runs against automated test infrastructure with no manual SAN setup, and godoc plus four worked examples cover discovery, read, write, raw CDB, and error handling
-**Plans**: TBD
+**Plans:** 3 plans
+Plans:
+- [ ] 02-01-PLAN.md — Text codec, negotiation engine, NegotiatedParams, LoginError
+- [ ] 02-02-PLAN.md — CHAP authentication (one-way and mutual)
+- [ ] 02-03-PLAN.md — Login state machine, functional options, mock target tests, digest activation
 
 ## Progress
 
@@ -118,7 +142,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. PDU Codec and Transport | 0/3 | Planning complete | - |
-| 2. Connection and Login | 0/TBD | Not started | - |
+| 2. Connection and Login | 0/3 | Planning complete | - |
 | 3. Session, Read Path, and Discovery | 0/TBD | Not started | - |
 | 4. Write Path | 0/TBD | Not started | - |
 | 5. SCSI Command Layer | 0/TBD | Not started | - |
