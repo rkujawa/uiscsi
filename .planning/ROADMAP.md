@@ -13,7 +13,7 @@ Build a pure-userspace iSCSI initiator library in Go from the bottom up, followi
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [ ] **Phase 1: PDU Codec and Transport** - Binary PDU encoding/decoding, CRC32C digests, serial number arithmetic, TCP framing, and PDU routing
-- [ ] **Phase 2: Connection and Login** - Connection state machine, read/write pumps, login negotiation, authentication, digest and operational parameter negotiation
+- [x] **Phase 2: Connection and Login** - Connection state machine, read/write pumps, login negotiation, authentication, digest and operational parameter negotiation (completed 2026-03-31)
 - [ ] **Phase 3: Session, Read Path, and Discovery** - Session state machine, command windowing, Data-In read path, keepalive, async events, logout, and SendTargets discovery
 - [ ] **Phase 4: Write Path** - R2T handling, Data-Out generation, immediate and unsolicited data, burst length enforcement
 - [ ] **Phase 5: SCSI Command Layer** - CDB builders and response parsers for all core and extended SCSI commands, structured sense data parsing
@@ -48,11 +48,11 @@ Plans:
   3. All RFC 7143 Section 13 mandatory operational parameters are negotiated correctly (HeaderDigest, DataDigest, MaxRecvDataSegmentLength, MaxBurstLength, FirstBurstLength, ImmediateData, InitialR2T, etc.)
   4. When HeaderDigest=CRC32C or DataDigest=CRC32C is negotiated, received PDUs with incorrect digests are detected and rejected
   5. Parameterized tests cover the negotiation parameter matrix (boolean AND/OR, numerical min/max, string list semantics)
-**Plans:** 1/3 plans executed
+**Plans:** 3/3 plans complete
 Plans:
-- [ ] 02-01-PLAN.md — Text codec, negotiation engine, NegotiatedParams, LoginError
+- [x] 02-01-PLAN.md — Text codec, negotiation engine, NegotiatedParams, LoginError
 - [x] 02-02-PLAN.md — CHAP authentication (one-way and mutual)
-- [ ] 02-03-PLAN.md — Login state machine, functional options, mock target tests, digest activation
+- [x] 02-03-PLAN.md — Login state machine, functional options, mock target tests, digest activation
 
 ### Phase 3: Session, Read Path, and Discovery
 **Goal**: A Go application can open a session, discover targets, issue SCSI read commands, and receive data with correct sequencing and flow control
@@ -67,7 +67,7 @@ Plans:
 **Plans:** 3 plans
 Plans:
 - [ ] 02-01-PLAN.md — Text codec, negotiation engine, NegotiatedParams, LoginError
-- [ ] 02-02-PLAN.md — CHAP authentication (one-way and mutual)
+- [x] 02-02-PLAN.md — CHAP authentication (one-way and mutual)
 - [ ] 02-03-PLAN.md — Login state machine, functional options, mock target tests, digest activation
 
 ### Phase 4: Write Path
@@ -142,7 +142,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. PDU Codec and Transport | 0/3 | Planning complete | - |
-| 2. Connection and Login | 1/3 | In Progress|  |
+| 2. Connection and Login | 3/3 | Complete   | 2026-03-31 |
 | 3. Session, Read Path, and Discovery | 0/TBD | Not started | - |
 | 4. Write Path | 0/TBD | Not started | - |
 | 5. SCSI Command Layer | 0/TBD | Not started | - |

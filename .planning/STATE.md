@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: verifying
-stopped_at: Completed 02-02-PLAN.md
-last_updated: "2026-03-31T23:05:51.474Z"
+stopped_at: Completed 02-03-PLAN.md
+last_updated: "2026-03-31T23:14:12.153Z"
 last_activity: 2026-03-31
 progress:
   total_phases: 7
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 6
-  completed_plans: 4
+  completed_plans: 6
   percent: 0
 ---
 
@@ -56,6 +56,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 01 P02 | 6min | 2 tasks | 11 files |
 | Phase 01 P03 | 4min | 2 tasks | 9 files |
 | Phase 02 P02 | 2min | 1 tasks | 2 files |
+| Phase 02 P03 | 4min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -77,6 +78,9 @@ Recent decisions affecting current work:
 - [Phase 01]: Router wraps ITT 0xFFFFFFFE->0x00000000, never allocating reserved 0xFFFFFFFF per RFC 7143
 - [Phase 02]: Package-private CHAP functions consumed only by login state machine
 - [Phase 02]: Constant-time comparison for mutual CHAP response verification
+- [Phase 02]: Synchronous PDU exchange via raw net.Conn during login (not pumps)
+- [Phase 02]: buildInitiatorKeys in login.go for login-specific key proposal construction
+- [Phase 02]: Mock target uses loopback TCP for realistic login integration testing
 
 ### Pending Todos
 
@@ -89,6 +93,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-31T23:05:51.463Z
-Stopped at: Completed 02-02-PLAN.md
+Last session: 2026-03-31T23:14:12.142Z
+Stopped at: Completed 02-03-PLAN.md
 Resume file: None

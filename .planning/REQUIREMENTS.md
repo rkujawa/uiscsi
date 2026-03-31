@@ -23,9 +23,9 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Login and Negotiation
 
-- [ ] **LOGIN-01**: Full login phase state machine (security negotiation, operational negotiation, leading connection, normal connection)
+- [x] **LOGIN-01**: Full login phase state machine (security negotiation, operational negotiation, leading connection, normal connection)
 - [ ] **LOGIN-02**: Text key-value negotiation engine for all RFC 7143 Section 13 mandatory keys
-- [ ] **LOGIN-03**: AuthMethod=None authentication
+- [x] **LOGIN-03**: AuthMethod=None authentication
 - [x] **LOGIN-04**: CHAP authentication (one-way: target authenticates initiator)
 - [x] **LOGIN-05**: Mutual CHAP authentication (bidirectional: both sides authenticate)
 - [ ] **LOGIN-06**: Operational parameter negotiation (HeaderDigest, DataDigest, MaxRecvDataSegmentLength, MaxBurstLength, FirstBurstLength, InitialR2T, ImmediateData, MaxOutstandingR2T, DataPDUInOrder, DataSequenceInOrder, DefaultTime2Wait, DefaultTime2Retain, MaxConnections, ErrorRecoveryLevel)
@@ -54,9 +54,9 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Integrity
 
-- [ ] **INTEG-01**: Header digest negotiation and CRC32C verification on received PDUs
-- [ ] **INTEG-02**: Data digest negotiation and CRC32C verification on received PDUs
-- [ ] **INTEG-03**: Digest generation on outgoing PDUs when negotiated
+- [x] **INTEG-01**: Header digest negotiation and CRC32C verification on received PDUs
+- [x] **INTEG-02**: Data digest negotiation and CRC32C verification on received PDUs
+- [x] **INTEG-03**: Digest generation on outgoing PDUs when negotiated
 
 ### Task Management
 
@@ -194,9 +194,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | XPORT-02 | Phase 1 | Complete |
 | XPORT-03 | Phase 1 | Complete |
 | XPORT-04 | Phase 1 | Complete |
-| LOGIN-01 | Phase 2 | Pending |
+| LOGIN-01 | Phase 2 | Complete |
 | LOGIN-02 | Phase 2 | Pending |
-| LOGIN-03 | Phase 2 | Pending |
+| LOGIN-03 | Phase 2 | Complete |
 | LOGIN-04 | Phase 2 | Complete |
 | LOGIN-05 | Phase 2 | Complete |
 | LOGIN-06 | Phase 2 | Pending |
@@ -213,9 +213,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | WRITE-03 | Phase 4 | Pending |
 | WRITE-04 | Phase 4 | Pending |
 | WRITE-05 | Phase 4 | Pending |
-| INTEG-01 | Phase 2 | Pending |
-| INTEG-02 | Phase 2 | Pending |
-| INTEG-03 | Phase 2 | Pending |
+| INTEG-01 | Phase 2 | Complete |
+| INTEG-02 | Phase 2 | Complete |
+| INTEG-03 | Phase 2 | Complete |
 | TMF-01 | Phase 6 | Pending |
 | TMF-02 | Phase 6 | Pending |
 | TMF-03 | Phase 6 | Pending |
