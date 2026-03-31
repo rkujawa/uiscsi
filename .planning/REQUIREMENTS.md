@@ -10,9 +10,9 @@ Requirements for initial release. Each maps to roadmap phases.
 ### PDU Foundation
 
 - [ ] **PDU-01**: Binary PDU encoder/decoder for all iSCSI PDU types (BHS + AHS + data segment + padding)
-- [ ] **PDU-02**: RFC 1982 serial number arithmetic for all sequence number comparisons (CmdSN, StatSN, ExpCmdSN, MaxCmdSN, DataSN, R2TSN)
-- [ ] **PDU-03**: CRC32C (Castagnoli) computation for header and data digests
-- [ ] **PDU-04**: PDU padding to 4-byte boundaries per RFC 7143
+- [x] **PDU-02**: RFC 1982 serial number arithmetic for all sequence number comparisons (CmdSN, StatSN, ExpCmdSN, MaxCmdSN, DataSN, R2TSN)
+- [x] **PDU-03**: CRC32C (Castagnoli) computation for header and data digests
+- [x] **PDU-04**: PDU padding to 4-byte boundaries per RFC 7143
 
 ### Transport
 
@@ -187,9 +187,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | PDU-01 | Phase 1 | Pending |
-| PDU-02 | Phase 1 | Pending |
-| PDU-03 | Phase 1 | Pending |
-| PDU-04 | Phase 1 | Pending |
+| PDU-02 | Phase 1 | Complete |
+| PDU-03 | Phase 1 | Complete |
+| PDU-04 | Phase 1 | Complete |
 | XPORT-01 | Phase 1 | Pending |
 | XPORT-02 | Phase 1 | Pending |
 | XPORT-03 | Phase 1 | Pending |
