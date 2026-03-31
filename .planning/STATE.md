@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: verifying
-stopped_at: Completed 02-01-PLAN.md
-last_updated: "2026-03-31T23:06:57.399Z"
+stopped_at: Completed 02-02-PLAN.md
+last_updated: "2026-03-31T23:05:51.474Z"
 last_activity: 2026-03-31
 progress:
   total_phases: 7
@@ -55,7 +55,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 01 P01 | 3min | 2 tasks | 7 files |
 | Phase 01 P02 | 6min | 2 tasks | 11 files |
 | Phase 01 P03 | 4min | 2 tasks | 9 files |
-| Phase 02 P01 | 3min | 2 tasks | 6 files |
+| Phase 02 P02 | 2min | 1 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -75,8 +75,8 @@ Recent decisions affecting current work:
 - [Phase 01]: io.ReadFull exclusively for TCP reads (Pitfall 6), single WritePump goroutine for write serialization (Pitfall 7)
 - [Phase 01]: Size-class buffer pooling (4KB/64KB/16MB) with copy-out ownership model for transport I/O
 - [Phase 01]: Router wraps ITT 0xFFFFFFFE->0x00000000, never allocating reserved 0xFFFFFFFF per RFC 7143
-- [Phase 02]: Declarative key registry pattern: negotiation behavior driven by KeyDef data structs
-- [Phase 02]: NegotiatedParams uses typed Go fields (bool/uint32) not map[string]string per D-05
+- [Phase 02]: Package-private CHAP functions consumed only by login state machine
+- [Phase 02]: Constant-time comparison for mutual CHAP response verification
 
 ### Pending Todos
 
@@ -89,6 +89,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-31T23:06:57.388Z
-Stopped at: Completed 02-01-PLAN.md
+Last session: 2026-03-31T23:05:51.463Z
+Stopped at: Completed 02-02-PLAN.md
 Resume file: None

@@ -50,8 +50,8 @@ Plans:
   5. Parameterized tests cover the negotiation parameter matrix (boolean AND/OR, numerical min/max, string list semantics)
 **Plans:** 1/3 plans executed
 Plans:
-- [x] 02-01-PLAN.md — Text codec, negotiation engine, NegotiatedParams, LoginError
-- [ ] 02-02-PLAN.md — CHAP authentication (one-way and mutual)
+- [ ] 02-01-PLAN.md — Text codec, negotiation engine, NegotiatedParams, LoginError
+- [x] 02-02-PLAN.md — CHAP authentication (one-way and mutual)
 - [ ] 02-03-PLAN.md — Login state machine, functional options, mock target tests, digest activation
 
 ### Phase 3: Session, Read Path, and Discovery
