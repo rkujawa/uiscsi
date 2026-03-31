@@ -24,11 +24,11 @@ Requirements for initial release. Each maps to roadmap phases.
 ### Login and Negotiation
 
 - [ ] **LOGIN-01**: Full login phase state machine (security negotiation, operational negotiation, leading connection, normal connection)
-- [ ] **LOGIN-02**: Text key-value negotiation engine for all RFC 7143 Section 13 mandatory keys
+- [x] **LOGIN-02**: Text key-value negotiation engine for all RFC 7143 Section 13 mandatory keys
 - [ ] **LOGIN-03**: AuthMethod=None authentication
 - [ ] **LOGIN-04**: CHAP authentication (one-way: target authenticates initiator)
 - [ ] **LOGIN-05**: Mutual CHAP authentication (bidirectional: both sides authenticate)
-- [ ] **LOGIN-06**: Operational parameter negotiation (HeaderDigest, DataDigest, MaxRecvDataSegmentLength, MaxBurstLength, FirstBurstLength, InitialR2T, ImmediateData, MaxOutstandingR2T, DataPDUInOrder, DataSequenceInOrder, DefaultTime2Wait, DefaultTime2Retain, MaxConnections, ErrorRecoveryLevel)
+- [x] **LOGIN-06**: Operational parameter negotiation (HeaderDigest, DataDigest, MaxRecvDataSegmentLength, MaxBurstLength, FirstBurstLength, InitialR2T, ImmediateData, MaxOutstandingR2T, DataPDUInOrder, DataSequenceInOrder, DefaultTime2Wait, DefaultTime2Retain, MaxConnections, ErrorRecoveryLevel)
 
 ### Session and Command Windowing
 
@@ -128,7 +128,7 @@ Requirements for initial release. Each maps to roadmap phases.
 - [ ] **TEST-01**: IOL-inspired conformance test suite covering full feature phase
 - [ ] **TEST-02**: Integration test infrastructure with automated target setup (no manual SAN configuration)
 - [x] **TEST-03**: Table-driven unit tests for PDU encoding/decoding
-- [ ] **TEST-04**: Parameterized tests for negotiation parameter matrix
+- [x] **TEST-04**: Parameterized tests for negotiation parameter matrix
 - [ ] **TEST-05**: Error injection tests for recovery level verification
 
 ### Documentation and Examples
@@ -195,11 +195,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | XPORT-03 | Phase 1 | Complete |
 | XPORT-04 | Phase 1 | Complete |
 | LOGIN-01 | Phase 2 | Pending |
-| LOGIN-02 | Phase 2 | Pending |
+| LOGIN-02 | Phase 2 | Complete |
 | LOGIN-03 | Phase 2 | Pending |
 | LOGIN-04 | Phase 2 | Pending |
 | LOGIN-05 | Phase 2 | Pending |
-| LOGIN-06 | Phase 2 | Pending |
+| LOGIN-06 | Phase 2 | Complete |
 | SESS-01 | Phase 3 | Pending |
 | SESS-02 | Phase 3 | Pending |
 | SESS-03 | Phase 3 | Pending |
@@ -260,7 +260,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | TEST-01 | Phase 7 | Pending |
 | TEST-02 | Phase 7 | Pending |
 | TEST-03 | Phase 1 | Complete |
-| TEST-04 | Phase 2 | Pending |
+| TEST-04 | Phase 2 | Complete |
 | TEST-05 | Phase 6 | Pending |
 | DOC-01 | Phase 7 | Pending |
 | DOC-02 | Phase 7 | Pending |
