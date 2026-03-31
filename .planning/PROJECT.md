@@ -15,24 +15,24 @@ Full RFC 7143 compliance as a composable Go library — the spec is non-negotiab
 - [x] Header and data digest negotiation and CRC32C verification — Validated in Phase 1: PDU Codec and Transport (CRC32C digest computation with RFC test vectors, padding)
 - [x] PDU binary encoding/decoding for all 24 iSCSI opcodes — Validated in Phase 1: PDU Codec and Transport (BHS marshal/unmarshal, AHS, round-trip tests)
 - [x] TCP transport with concurrent PDU framing — Validated in Phase 1: PDU Codec and Transport (read/write pumps, ITT routing, race-free under -race)
+- [x] Full iSCSI login phase: leading login, authentication, operational negotiation — Validated in Phase 2: Connection and Login (login state machine, CSG/NSG transitions, functional options API)
+- [x] Authentication: None, CHAP, and mutual CHAP — Validated in Phase 2: Connection and Login (CHAP MD5 response, hex encoding, mock target tests)
+- [x] iSCSI text negotiation for all mandatory keys (RFC 7143 Section 13) — Validated in Phase 2: Connection and Login (declarative key registry, 14 mandatory keys, parameterized tests)
+- [x] Header and data digest negotiation and CRC32C verification — Validated in Phase 2: Connection and Login (digest negotiation during login, SetDigests activation post-login)
 
 ### Active
 
 - [ ] SendTargets discovery to enumerate available targets and LUNs
-- [ ] Full iSCSI login phase: leading login, authentication, operational negotiation
-- [ ] Authentication: None, CHAP, and mutual CHAP
 - [ ] iSCSI full feature phase: SCSI command PDUs, data-in/out, R2T handling
 - [ ] Error recovery level 0 (session-level reconnection)
 - [ ] Error recovery level 1 (within-connection PDU retransmission)
 - [ ] Error recovery level 2 (connection-level recovery within session)
-- [ ] Header and data digest negotiation and CRC32C verification
 - [ ] Task management: ABORT TASK, ABORT TASK SET, LUN RESET, TARGET WARM/COLD RESET
 - [ ] Async event/message handling from target
 - [ ] Low-level API: raw CDB pass-through (user builds CDB bytes, library transports)
 - [ ] High-level API: typed Go functions (ReadBlocks, WriteBlocks, Inquiry, TestUnitReady, etc.)
 - [ ] IOL-inspired integration test suite covering full feature phase conformance
 - [ ] Comprehensive examples for developer onboarding
-- [ ] iSCSI text negotiation for all mandatory keys (RFC 7143 Section 13)
 
 ### Out of Scope
 
@@ -88,4 +88,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-03-31 after Phase 1 completion*
+*Last updated: 2026-04-01 after Phase 2 completion*
