@@ -9,7 +9,7 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### PDU Foundation
 
-- [ ] **PDU-01**: Binary PDU encoder/decoder for all iSCSI PDU types (BHS + AHS + data segment + padding)
+- [x] **PDU-01**: Binary PDU encoder/decoder for all iSCSI PDU types (BHS + AHS + data segment + padding)
 - [x] **PDU-02**: RFC 1982 serial number arithmetic for all sequence number comparisons (CmdSN, StatSN, ExpCmdSN, MaxCmdSN, DataSN, R2TSN)
 - [x] **PDU-03**: CRC32C (Castagnoli) computation for header and data digests
 - [x] **PDU-04**: PDU padding to 4-byte boundaries per RFC 7143
@@ -127,7 +127,7 @@ Requirements for initial release. Each maps to roadmap phases.
 
 - [ ] **TEST-01**: IOL-inspired conformance test suite covering full feature phase
 - [ ] **TEST-02**: Integration test infrastructure with automated target setup (no manual SAN configuration)
-- [ ] **TEST-03**: Table-driven unit tests for PDU encoding/decoding
+- [x] **TEST-03**: Table-driven unit tests for PDU encoding/decoding
 - [ ] **TEST-04**: Parameterized tests for negotiation parameter matrix
 - [ ] **TEST-05**: Error injection tests for recovery level verification
 
@@ -186,7 +186,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| PDU-01 | Phase 1 | Pending |
+| PDU-01 | Phase 1 | Complete |
 | PDU-02 | Phase 1 | Complete |
 | PDU-03 | Phase 1 | Complete |
 | PDU-04 | Phase 1 | Complete |
@@ -259,7 +259,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | OBS-03 | Phase 7 | Pending |
 | TEST-01 | Phase 7 | Pending |
 | TEST-02 | Phase 7 | Pending |
-| TEST-03 | Phase 1 | Pending |
+| TEST-03 | Phase 1 | Complete |
 | TEST-04 | Phase 2 | Pending |
 | TEST-05 | Phase 6 | Pending |
 | DOC-01 | Phase 7 | Pending |

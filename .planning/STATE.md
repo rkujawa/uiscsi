@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 01-01-PLAN.md
-last_updated: "2026-03-31T20:34:02.329Z"
+stopped_at: Completed 01-02-PLAN.md
+last_updated: "2026-03-31T20:42:55.906Z"
 last_activity: 2026-03-31
 progress:
   total_phases: 7
   completed_phases: 0
   total_plans: 3
-  completed_plans: 1
+  completed_plans: 2
   percent: 0
 ---
 
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-03-31)
 ## Current Position
 
 Phase: 01 (pdu-codec-and-transport) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 Status: Ready to execute
 Last activity: 2026-03-31
 
@@ -53,6 +53,7 @@ Progress: [░░░░░░░░░░] 0%
 
 *Updated after each plan completion*
 | Phase 01 P01 | 3min | 2 tasks | 7 files |
+| Phase 01 P02 | 6min | 2 tasks | 11 files |
 
 ## Accumulated Context
 
@@ -66,6 +67,9 @@ Recent decisions affecting current work:
 - [Phase 01]: int32 cast trick for RFC 1982 serial comparison
 - [Phase 01]: Package-level crc32cTable for one-time CRC32C init
 - [Phase 01]: Double-modulo padding formula (4-(n%4))%4 to avoid returning 4 for aligned inputs
+- [Phase 01]: Typed PDU per opcode with embedded Header base struct (D-01/D-03 compliance)
+- [Phase 01]: 3-byte manual encoding for DataSegmentLength to avoid TotalAHSLength corruption
+- [Phase 01]: Login PDU byte 1 reuses Final bit position for Transit bit per RFC 7143 Section 11.12
 
 ### Pending Todos
 
@@ -78,6 +82,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-31T20:34:02.319Z
-Stopped at: Completed 01-01-PLAN.md
+Last session: 2026-03-31T20:42:55.895Z
+Stopped at: Completed 01-02-PLAN.md
 Resume file: None

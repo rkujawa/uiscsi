@@ -35,7 +35,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans:** 3 plans
 Plans:
 - [x] 01-01-PLAN.md — Go module init, serial arithmetic, CRC32C digest, padding helpers
-- [ ] 01-02-PLAN.md — All 24 PDU opcode types with BHS codec and round-trip tests
+- [x] 01-02-PLAN.md — All 24 PDU opcode types with BHS codec and round-trip tests
 - [ ] 01-03-PLAN.md — TCP transport: framing, read/write pumps, ITT router, buffer pool
 
 ### Phase 2: Connection and Login
