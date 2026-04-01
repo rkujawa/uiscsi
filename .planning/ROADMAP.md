@@ -82,9 +82,9 @@ Plans:
   5. MaxOutstandingR2T is respected and MaxBurstLength is enforced for all solicited data sequences
 **Plans:** 3 plans
 Plans:
-- [ ] 04-01-PLAN.md — [to be planned]
-- [ ] 04-02-PLAN.md — [to be planned]
-- [ ] 04-03-PLAN.md — [to be planned]
+- [ ] 04-01-PLAN.md — Command type io.Reader migration, Submit write detection, immediate data
+- [ ] 04-02-PLAN.md — Data-Out engine: R2T handling, solicited/unsolicited Data-Out, MaxBurstLength
+- [ ] 04-03-PLAN.md — Parameterized 2x2 ImmediateData x InitialR2T matrix and edge case tests
 
 ### Phase 5: SCSI Command Layer
 **Goal**: A Go application can issue all core and extended SCSI commands with structured CDB building and response parsing, including sense data interpretation
@@ -144,7 +144,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
 | 1. PDU Codec and Transport | 3/3 | Complete | - |
 | 2. Connection and Login | 3/3 | Complete   | 2026-03-31 |
 | 3. Session, Read Path, and Discovery | 0/3 | Planning complete | - |
-| 4. Write Path | 0/TBD | Not started | - |
+| 4. Write Path | 0/3 | Planning complete | - |
 | 5. SCSI Command Layer | 0/TBD | Not started | - |
 | 6. Error Recovery and Task Management | 0/TBD | Not started | - |
 | 7. Public API, Observability, and Release | 0/TBD | Not started | - |
