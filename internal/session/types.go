@@ -18,8 +18,12 @@ type Command struct {
 	Write                  bool
 	ExpectedDataTransferLen uint32
 	LUN                    uint64
-	ImmediateData          []byte
 	TaskAttributes         uint8
+
+	// Data provides write payload. Non-nil means write command. Callers
+	// with []byte use bytes.NewReader(). The io.Reader must remain
+	// readable until the Result is received.
+	Data io.Reader
 }
 
 // Result carries the outcome of a submitted SCSI command.

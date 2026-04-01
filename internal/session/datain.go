@@ -3,6 +3,7 @@ package session
 import (
 	"bytes"
 	"fmt"
+	"io"
 
 	"github.com/rkujawa/uiscsi/internal/pdu"
 )
@@ -17,15 +18,20 @@ type task struct {
 	nextDataSN uint32
 	nextOffset uint32
 	isRead     bool
+	isWrite    bool
+	reader     io.Reader // holds cmd.Data for write tasks; exclusively owned by task goroutine after Submit reads immediate data
+	bytesSent  uint32    // cumulative bytes sent: immediate + unsolicited, used for offset tracking
 }
 
 // newTask creates a task for the given ITT. If isRead is true, a buffer
-// is allocated for Data-In reassembly.
-func newTask(itt uint32, isRead bool) *task {
+// is allocated for Data-In reassembly. If isWrite is true, no buffer is
+// allocated (writes don't accumulate Data-In).
+func newTask(itt uint32, isRead bool, isWrite bool) *task {
 	t := &task{
 		itt:      itt,
 		resultCh: make(chan Result, 1),
 		isRead:   isRead,
+		isWrite:  isWrite,
 	}
 	if isRead {
 		t.buf = &bytes.Buffer{}

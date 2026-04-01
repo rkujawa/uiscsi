@@ -8,7 +8,7 @@ import (
 )
 
 func TestTaskSingleDataIn(t *testing.T) {
-	tk := newTask(1, true)
+	tk := newTask(1, true, false)
 
 	data := []byte("hello iSCSI")
 	din := &pdu.DataIn{
@@ -40,7 +40,7 @@ func TestTaskSingleDataIn(t *testing.T) {
 }
 
 func TestTaskMultiDataIn(t *testing.T) {
-	tk := newTask(1, true)
+	tk := newTask(1, true, false)
 
 	// 3 Data-In PDUs without status, then a SCSIResponse.
 	chunks := [][]byte{
@@ -83,7 +83,7 @@ func TestTaskMultiDataIn(t *testing.T) {
 }
 
 func TestTaskDataSNGap(t *testing.T) {
-	tk := newTask(1, true)
+	tk := newTask(1, true, false)
 
 	// First Data-In is fine.
 	tk.handleDataIn(&pdu.DataIn{
@@ -106,7 +106,7 @@ func TestTaskDataSNGap(t *testing.T) {
 }
 
 func TestTaskOffsetMismatch(t *testing.T) {
-	tk := newTask(1, true)
+	tk := newTask(1, true, false)
 
 	// First Data-In.
 	tk.handleDataIn(&pdu.DataIn{
@@ -129,7 +129,7 @@ func TestTaskOffsetMismatch(t *testing.T) {
 }
 
 func TestTaskNonReadCommand(t *testing.T) {
-	tk := newTask(1, false) // non-read
+	tk := newTask(1, false, false) // non-read
 
 	resp := &pdu.SCSIResponse{
 		Status: 0x00,
