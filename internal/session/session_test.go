@@ -5,7 +5,6 @@ import (
 	"encoding/binary"
 	"io"
 	"net"
-	"sync"
 	"testing"
 
 	"github.com/rkujawa/uiscsi/internal/login"
@@ -225,52 +224,52 @@ func TestSessionConcurrentSubmit(t *testing.T) {
 	sess, targetConn := newTestSession(t)
 
 	const n = 3
-	var wg sync.WaitGroup
-	wg.Add(n)
 
-	// Submit n commands concurrently.
+	// Submit n commands concurrently. Each submit may block on CmdSN window.
 	type cmdResult struct {
 		resultCh <-chan Result
 		idx      int
 	}
-	results := make(chan cmdResult, n)
+	resultsCh := make(chan cmdResult, n)
 
 	for i := 0; i < n; i++ {
 		go func(idx int) {
-			defer wg.Done()
 			cmd := Command{CDB: [16]byte{byte(idx)}}
 			ch, err := sess.Submit(context.Background(), cmd)
 			if err != nil {
 				t.Errorf("Submit(%d): %v", idx, err)
 				return
 			}
-			results <- cmdResult{resultCh: ch, idx: idx}
+			resultsCh <- cmdResult{resultCh: ch, idx: idx}
 		}(i)
 	}
 
-	// Wait for all submits.
-	wg.Wait()
-	close(results)
-
-	// Read all commands from target and respond.
-	for range n {
+	// Process commands one at a time from the target side.
+	// Each response advances the CmdSN window, allowing the next submit to proceed.
+	var allResults []cmdResult
+	for i := 0; i < n; i++ {
 		raw, err := transport.ReadRawPDU(targetConn, false, false)
 		if err != nil {
-			t.Fatalf("read command: %v", err)
+			t.Fatalf("read command %d: %v", i, err)
 		}
 		itt := binary.BigEndian.Uint32(raw.BHS[16:20])
 
+		// Advance MaxCmdSN to allow next command.
 		writeSCSIResponsePDU(t, targetConn, &pdu.SCSIResponse{
 			Header:   pdu.Header{InitiatorTaskTag: itt},
 			Status:   0x00,
-			StatSN:   1,
-			ExpCmdSN: uint32(n + 1),
-			MaxCmdSN: 100,
+			StatSN:   uint32(1 + i),
+			ExpCmdSN: uint32(2 + i),
+			MaxCmdSN: uint32(2 + i),
 		})
+
+		// Collect the result channel.
+		cr := <-resultsCh
+		allResults = append(allResults, cr)
 	}
 
-	// Verify all results arrive.
-	for cr := range results {
+	// Verify all results.
+	for _, cr := range allResults {
 		result := <-cr.resultCh
 		if result.Err != nil {
 			t.Errorf("result %d error: %v", cr.idx, result.Err)

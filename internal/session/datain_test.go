@@ -101,11 +101,7 @@ func TestTaskDataSNGap(t *testing.T) {
 
 	result := <-tk.resultCh
 	if result.Err == nil {
-		// If no error in result, the error should surface from io.Reader.
-		_, err := io.ReadAll(result.Data)
-		if err == nil {
-			t.Fatal("expected error from reader due to DataSN gap")
-		}
+		t.Fatal("expected error from DataSN gap")
 	}
 }
 
@@ -128,10 +124,7 @@ func TestTaskOffsetMismatch(t *testing.T) {
 
 	result := <-tk.resultCh
 	if result.Err == nil {
-		_, err := io.ReadAll(result.Data)
-		if err == nil {
-			t.Fatal("expected error from reader due to offset mismatch")
-		}
+		t.Fatal("expected error from offset mismatch")
 	}
 }
 

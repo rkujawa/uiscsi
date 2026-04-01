@@ -20,6 +20,19 @@ type Conn struct {
 	maxRecvDSL uint32
 }
 
+// NewConnFromNetConn wraps an existing net.Conn as a transport Conn.
+// Used by the session layer and tests when the TCP connection is already
+// established (e.g., after login).
+func NewConnFromNetConn(nc net.Conn) *Conn {
+	return &Conn{conn: nc}
+}
+
+// DigestHeader reports whether header digests are enabled.
+func (c *Conn) DigestHeader() bool { return c.digestHeader }
+
+// DigestData reports whether data digests are enabled.
+func (c *Conn) DigestData() bool { return c.digestData }
+
 // Dial connects to an iSCSI target at the given TCP address using the
 // provided context for timeout/cancellation control.
 func Dial(ctx context.Context, addr string) (*Conn, error) {
