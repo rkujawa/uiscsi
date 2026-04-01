@@ -13,6 +13,7 @@ import (
 // into a buffered reader delivered via Result.
 type task struct {
 	itt        uint32
+	lun        uint64        // stored for TMF LUN-based cleanup (AbortTaskSet, LUNReset, ClearTaskSet)
 	buf        *bytes.Buffer // accumulates Data-In payload for read commands
 	resultCh   chan Result
 	nextDataSN uint32

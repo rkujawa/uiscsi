@@ -105,6 +105,7 @@ func (s *Session) Submit(ctx context.Context, cmd Command) (<-chan Result, error
 
 	// Create task for tracking this command.
 	tk := newTask(itt, cmd.Read, isWrite)
+	tk.lun = cmd.LUN // Store LUN for TMF LUN-based cleanup
 
 	s.mu.Lock()
 	s.tasks[itt] = tk
