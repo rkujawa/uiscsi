@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 05-01-PLAN.md
-last_updated: "2026-04-01T12:49:16.271Z"
+stopped_at: Completed 05-03-PLAN.md
+last_updated: "2026-04-01T12:57:01.111Z"
 last_activity: 2026-04-01
 progress:
   total_phases: 7
   completed_phases: 4
   total_plans: 16
-  completed_plans: 14
+  completed_plans: 15
   percent: 0
 ---
 
@@ -63,6 +63,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 04 P01 | 5min | 3 tasks | 5 files |
 | Phase 04 P03 | 9min | 2 tasks | 1 files |
 | Phase 05 P01 | 6min | 2 tasks | 11 files |
+| Phase 05 P03 | 5min | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -100,6 +101,9 @@ Recent decisions affecting current work:
 - [Phase 05]: ~70 ASC/ASCQ entries in lookup table covering common SPC-4 Annex D codes
 - [Phase 05]: checkResult helper centralizes status check + sense parse + data read for all parse functions
 - [Phase 05]: CDB builder pattern: plain functions return session.Command with packed CDB bytes
+- [Phase 05]: UNMAP parameter data: 8-byte header + 16-byte descriptors with data-length fields
+- [Phase 05]: PR OUT 24-byte parameter data: key + saKey + zeros; NDOB flag disables data transfer
+- [Phase 05]: CompareAndWrite ExpectedDataTransferLen = 2*blocks*blockSize per Pitfall 8
 
 ### Pending Todos
 
@@ -112,6 +116,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-01T12:49:16.259Z
-Stopped at: Completed 05-01-PLAN.md
+Last session: 2026-04-01T12:57:01.100Z
+Stopped at: Completed 05-03-PLAN.md
 Resume file: None
