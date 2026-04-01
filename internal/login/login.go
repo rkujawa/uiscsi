@@ -147,6 +147,10 @@ func Login(ctx context.Context, tc *transport.Conn, opts ...LoginOption) (*Negot
 	tc.SetDigests(ls.params.HeaderDigest, ls.params.DataDigest)
 	tc.SetMaxRecvDSL(ls.params.MaxRecvDataSegmentLength)
 
+	// Hand off post-login sequence numbers to the session layer.
+	ls.params.CmdSN = ls.cmdSN
+	ls.params.ExpStatSN = ls.expStatSN
+
 	return ls.params, nil
 }
 

@@ -20,6 +20,8 @@ type NegotiatedParams struct {
 	ErrorRecoveryLevel       uint32
 	TargetName               string
 	TSIH                     uint16
+	CmdSN                    uint32 // Post-login CmdSN for session layer handoff
+	ExpStatSN                uint32 // Post-login ExpStatSN for session layer handoff
 }
 
 // Defaults returns a NegotiatedParams populated with the RFC 7143
@@ -40,5 +42,7 @@ func Defaults() NegotiatedParams {
 		DataPDUInOrder:           true,
 		DataSequenceInOrder:      true,
 		ErrorRecoveryLevel:       0,
+		CmdSN:                    1,
+		ExpStatSN:                0,
 	}
 }
