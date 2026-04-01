@@ -66,9 +66,9 @@ Plans:
   5. Graceful logout tears down the session cleanly, and async messages from the target (including target-requested logout) are handled
 **Plans:** 3 plans
 Plans:
-- [ ] 02-01-PLAN.md — Text codec, negotiation engine, NegotiatedParams, LoginError
-- [x] 02-02-PLAN.md — CHAP authentication (one-way and mutual)
-- [ ] 02-03-PLAN.md — Login state machine, functional options, mock target tests, digest activation
+- [ ] 03-01-PLAN.md — Session core: types, CmdSN windowing, Submit, Data-In reassembly
+- [ ] 03-02-PLAN.md — Keepalive, async events, logout
+- [ ] 03-03-PLAN.md — SendTargets discovery and Discover convenience function
 
 ### Phase 4: Write Path
 **Goal**: A Go application can write data to an iSCSI target through all write path variants with correct R2T handling and burst length enforcement
@@ -82,9 +82,9 @@ Plans:
   5. MaxOutstandingR2T is respected and MaxBurstLength is enforced for all solicited data sequences
 **Plans:** 3 plans
 Plans:
-- [ ] 02-01-PLAN.md — Text codec, negotiation engine, NegotiatedParams, LoginError
-- [ ] 02-02-PLAN.md — CHAP authentication (one-way and mutual)
-- [ ] 02-03-PLAN.md — Login state machine, functional options, mock target tests, digest activation
+- [ ] 04-01-PLAN.md — [to be planned]
+- [ ] 04-02-PLAN.md — [to be planned]
+- [ ] 04-03-PLAN.md — [to be planned]
 
 ### Phase 5: SCSI Command Layer
 **Goal**: A Go application can issue all core and extended SCSI commands with structured CDB building and response parsing, including sense data interpretation
@@ -98,9 +98,9 @@ Plans:
   5. All CDB builders can be verified with round-trip tests independent of a live iSCSI target
 **Plans:** 3 plans
 Plans:
-- [ ] 02-01-PLAN.md — Text codec, negotiation engine, NegotiatedParams, LoginError
-- [ ] 02-02-PLAN.md — CHAP authentication (one-way and mutual)
-- [ ] 02-03-PLAN.md — Login state machine, functional options, mock target tests, digest activation
+- [ ] 05-01-PLAN.md — [to be planned]
+- [ ] 05-02-PLAN.md — [to be planned]
+- [ ] 05-03-PLAN.md — [to be planned]
 
 ### Phase 6: Error Recovery and Task Management
 **Goal**: A Go application can recover from connection failures at all three error recovery levels and manage outstanding tasks
@@ -114,9 +114,9 @@ Plans:
   5. Error injection tests verify recovery behavior under simulated connection failures, timeout scenarios, and digest errors
 **Plans:** 3 plans
 Plans:
-- [ ] 02-01-PLAN.md — Text codec, negotiation engine, NegotiatedParams, LoginError
-- [ ] 02-02-PLAN.md — CHAP authentication (one-way and mutual)
-- [ ] 02-03-PLAN.md — Login state machine, functional options, mock target tests, digest activation
+- [ ] 06-01-PLAN.md — [to be planned]
+- [ ] 06-02-PLAN.md — [to be planned]
+- [ ] 06-03-PLAN.md — [to be planned]
 
 ### Phase 7: Public API, Observability, and Release
 **Goal**: Library consumers can use a clean, Go-idiomatic API with both high-level convenience and low-level control, backed by observability and comprehensive documentation
@@ -130,9 +130,9 @@ Plans:
   5. IOL-inspired conformance test suite runs against automated test infrastructure with no manual SAN setup, and godoc plus four worked examples cover discovery, read, write, raw CDB, and error handling
 **Plans:** 3 plans
 Plans:
-- [ ] 02-01-PLAN.md — Text codec, negotiation engine, NegotiatedParams, LoginError
-- [ ] 02-02-PLAN.md — CHAP authentication (one-way and mutual)
-- [ ] 02-03-PLAN.md — Login state machine, functional options, mock target tests, digest activation
+- [ ] 07-01-PLAN.md — [to be planned]
+- [ ] 07-02-PLAN.md — [to be planned]
+- [ ] 07-03-PLAN.md — [to be planned]
 
 ## Progress
 
@@ -141,9 +141,9 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. PDU Codec and Transport | 0/3 | Planning complete | - |
+| 1. PDU Codec and Transport | 3/3 | Complete | - |
 | 2. Connection and Login | 3/3 | Complete   | 2026-03-31 |
-| 3. Session, Read Path, and Discovery | 0/TBD | Not started | - |
+| 3. Session, Read Path, and Discovery | 0/3 | Planning complete | - |
 | 4. Write Path | 0/TBD | Not started | - |
 | 5. SCSI Command Layer | 0/TBD | Not started | - |
 | 6. Error Recovery and Task Management | 0/TBD | Not started | - |
