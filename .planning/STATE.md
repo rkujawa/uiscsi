@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 06.1-01 and 06.1-02 (Wave 1)
-last_updated: "2026-04-01T21:05:41.482Z"
+stopped_at: Completed 06.1-03-PLAN.md
+last_updated: "2026-04-01T21:16:44.810Z"
 last_activity: 2026-04-01
 progress:
   total_phases: 8
-  completed_phases: 6
+  completed_phases: 7
   total_plans: 22
-  completed_plans: 20
+  completed_plans: 22
   percent: 66
 ---
 
@@ -67,6 +67,7 @@ Progress: [██████░░░░] 66%
 | Phase 06 P02 | 10min | 2 tasks | 9 files |
 | Phase 06.1 P01 | 4min | 2 tasks | 6 files |
 | Phase 06.1 P02 | 4min | 2 tasks | 7 files |
+| Phase 06.1 P03 | 7min | 3 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -113,6 +114,8 @@ Recent decisions affecting current work:
 - [Phase 06.1]: Direction constants (HookSend/HookReceive) in transport package to avoid session->transport circular dependency
 - [Phase 06.1]: pduHookBridge returns nil when no hooks configured for zero-cost hot path
 - [Phase 06.1]: Push-based MetricEvent callback (no concrete stats struct) per D-11 design
+- [Phase 06.1]: DigestError unconditionally connection-fatal (no reconnect) per RFC 7143 Section 7.3
+- [Phase 06.1]: Login logger injected via WithLoginLogger option, defaults to slog.Default()
 
 ### Roadmap Evolution
 
@@ -129,6 +132,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-01T21:05:41.470Z
-Stopped at: Completed 06.1-01 and 06.1-02 (Wave 1)
+Last session: 2026-04-01T21:16:44.798Z
+Stopped at: Completed 06.1-03-PLAN.md
 Resume file: None

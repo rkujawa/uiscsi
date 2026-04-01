@@ -120,7 +120,7 @@ Requirements for initial release. Each maps to roadmap phases.
 ### Observability
 
 - [x] **OBS-01**: Connection-level statistics (latency, throughput, error counts, retry counts)
-- [ ] **OBS-02**: Structured logging via log/slog with configurable levels
+- [x] **OBS-02**: Structured logging via log/slog with configurable levels
 - [x] **OBS-03**: Hooks/callbacks for monitoring connection state transitions
 
 ### Testing
@@ -255,7 +255,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | API-04 | Phase 7 | Pending |
 | API-05 | Phase 7 | Pending |
 | OBS-01 | Phase 7 | Complete |
-| OBS-02 | Phase 7 | Pending |
+| OBS-02 | Phase 7 | Complete |
 | OBS-03 | Phase 7 | Complete |
 | TEST-01 | Phase 7 | Pending |
 | TEST-02 | Phase 7 | Pending |

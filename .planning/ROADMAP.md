@@ -132,11 +132,11 @@ Plans:
   5. Login stage transitions, task lifecycle, and command window changes are logged via slog at Debug level
   6. Connection-level metrics (PDU counts by type, bytes in/out, command latency) are available to consumers
   7. Full PDU exchanges are traceable at slog Debug level
-**Plans:** 2/3 plans executed
+**Plans:** 3/3 plans complete
 Plans:
 - [x] 06.1-01-PLAN.md — DigestError type, digest verification in ReadRawPDU, PDU String() methods
 - [x] 06.1-02-PLAN.md — PDU hooks, metrics events, pump logger injection
-- [ ] 06.1-03-PLAN.md — Structured slog lifecycle logging, enriched errors
+- [x] 06.1-03-PLAN.md — Structured slog lifecycle logging, enriched errors
 
 ### Phase 7: Public API, Observability, and Release
 **Goal**: Library consumers can use a clean, Go-idiomatic API with both high-level convenience and low-level control, backed by observability and comprehensive documentation
