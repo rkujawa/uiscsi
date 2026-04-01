@@ -4,6 +4,7 @@
 package session
 
 import (
+	"errors"
 	"io"
 	"log/slog"
 	"time"
@@ -63,24 +64,71 @@ type Portal struct {
 	GroupTag int
 }
 
+// TMF function codes per RFC 7143 Section 11.5.1.
+const (
+	TMFAbortTask        uint8 = 1
+	TMFAbortTaskSet     uint8 = 2
+	TMFClearTaskSet     uint8 = 3
+	TMFLogicalUnitReset uint8 = 5
+	TMFTargetWarmReset  uint8 = 6
+	TMFTargetColdReset  uint8 = 7
+	TMFTaskReassign     uint8 = 14
+)
+
+// TMF response codes per RFC 7143 Section 11.6.1.
+const (
+	TMFRespComplete           uint8 = 0
+	TMFRespTaskNotExist       uint8 = 1
+	TMFRespLUNNotExist        uint8 = 2
+	TMFRespTaskAllegiant      uint8 = 3
+	TMFRespReassignNotSupport uint8 = 4
+	TMFRespNotSupported       uint8 = 5
+	TMFRespAuthFailed         uint8 = 6
+	TMFRespRejected           uint8 = 255
+)
+
+// SNACK type values per RFC 7143 Section 11.16.1.
+const (
+	SNACKTypeDataR2T    uint8 = 0
+	SNACKTypeStatus     uint8 = 1
+	SNACKTypeDataACK    uint8 = 2
+	SNACKTypeRDataSNACK uint8 = 3
+)
+
+// TMFResult carries the outcome of a task management function request.
+type TMFResult struct {
+	Response uint8
+	Err      error
+}
+
+// ErrTaskAborted is the sentinel error delivered to a task's resultCh when
+// the task is aborted via a TMF request.
+var ErrTaskAborted = errors.New("session: task aborted")
+
 // SessionOption configures a Session via the functional options pattern.
 type SessionOption func(*sessionConfig)
 
 // sessionConfig holds tunable session parameters. Unexported to enforce
 // construction via SessionOption functions.
 type sessionConfig struct {
-	keepaliveInterval time.Duration
-	keepaliveTimeout  time.Duration
-	asyncHandler      func(AsyncEvent)
-	logger            *slog.Logger
+	keepaliveInterval    time.Duration
+	keepaliveTimeout     time.Duration
+	asyncHandler         func(AsyncEvent)
+	logger               *slog.Logger
+	maxReconnectAttempts int
+	reconnectBackoff     time.Duration
+	snackTimeout         time.Duration
 }
 
 // defaultConfig returns a sessionConfig with sensible defaults.
 func defaultConfig() sessionConfig {
 	return sessionConfig{
-		keepaliveInterval: 30 * time.Second,
-		keepaliveTimeout:  5 * time.Second,
-		logger:            slog.Default(),
+		keepaliveInterval:    30 * time.Second,
+		keepaliveTimeout:     5 * time.Second,
+		logger:               slog.Default(),
+		maxReconnectAttempts: 3,
+		reconnectBackoff:     1 * time.Second,
+		snackTimeout:         5 * time.Second,
 	}
 }
 
@@ -110,5 +158,29 @@ func WithAsyncHandler(h func(AsyncEvent)) SessionOption {
 func WithLogger(l *slog.Logger) SessionOption {
 	return func(c *sessionConfig) {
 		c.logger = l
+	}
+}
+
+// WithMaxReconnectAttempts sets the maximum number of reconnection attempts
+// for error recovery level 0 (session-level reconnection).
+func WithMaxReconnectAttempts(n int) SessionOption {
+	return func(c *sessionConfig) {
+		c.maxReconnectAttempts = n
+	}
+}
+
+// WithReconnectBackoff sets the base backoff duration between reconnection
+// attempts. Actual backoff may include jitter or exponential growth.
+func WithReconnectBackoff(base time.Duration) SessionOption {
+	return func(c *sessionConfig) {
+		c.reconnectBackoff = base
+	}
+}
+
+// WithSNACKTimeout sets the timeout for SNACK-based PDU retransmission
+// requests used in error recovery level 1.
+func WithSNACKTimeout(d time.Duration) SessionOption {
+	return func(c *sessionConfig) {
+		c.snackTimeout = d
 	}
 }
