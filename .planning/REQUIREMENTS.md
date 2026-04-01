@@ -69,7 +69,7 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Error Recovery
 
-- [ ] **ERL-01**: Error Recovery Level 0 — session-level recovery (detect failure, reconnect, reinstate session, retry commands)
+- [x] **ERL-01**: Error Recovery Level 0 — session-level recovery (detect failure, reconnect, reinstate session, retry commands)
 - [ ] **ERL-02**: Error Recovery Level 1 — within-connection recovery (SNACK for data/status retransmission without dropping connection)
 - [ ] **ERL-03**: Error Recovery Level 2 — connection-level recovery (connection allegiance reassignment, task reassignment within session)
 
@@ -129,7 +129,7 @@ Requirements for initial release. Each maps to roadmap phases.
 - [ ] **TEST-02**: Integration test infrastructure with automated target setup (no manual SAN configuration)
 - [x] **TEST-03**: Table-driven unit tests for PDU encoding/decoding
 - [ ] **TEST-04**: Parameterized tests for negotiation parameter matrix
-- [ ] **TEST-05**: Error injection tests for recovery level verification
+- [x] **TEST-05**: Error injection tests for recovery level verification
 
 ### Documentation and Examples
 
@@ -222,7 +222,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | TMF-04 | Phase 6 | Pending |
 | TMF-05 | Phase 6 | Pending |
 | TMF-06 | Phase 6 | Pending |
-| ERL-01 | Phase 6 | Pending |
+| ERL-01 | Phase 6 | Complete |
 | ERL-02 | Phase 6 | Pending |
 | ERL-03 | Phase 6 | Pending |
 | EVT-01 | Phase 3 | Complete |
@@ -261,7 +261,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | TEST-02 | Phase 7 | Pending |
 | TEST-03 | Phase 1 | Complete |
 | TEST-04 | Phase 2 | Pending |
-| TEST-05 | Phase 6 | Pending |
+| TEST-05 | Phase 6 | Complete |
 | DOC-01 | Phase 7 | Pending |
 | DOC-02 | Phase 7 | Pending |
 | DOC-03 | Phase 7 | Pending |
