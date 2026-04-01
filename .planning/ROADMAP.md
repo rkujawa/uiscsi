@@ -85,7 +85,7 @@ Plans:
 - [x] 04-01-PLAN.md — Command type io.Reader migration, Submit write detection, immediate data
 - [x] 04-02-PLAN.md — Data-Out engine: R2T handling, solicited/unsolicited Data-Out, MaxBurstLength
 - [x] 04-03-PLAN.md — Parameterized 2x2 ImmediateData x InitialR2T matrix and edge case tests
-- [ ] 04-04-PLAN.md — Gap closure: configurable close timeout for fast test teardown
+- [x] 04-04-PLAN.md — Gap closure: configurable close timeout for fast test teardown
 
 ### Phase 5: SCSI Command Layer
 **Goal**: A Go application can issue all core and extended SCSI commands with structured CDB building and response parsing, including sense data interpretation
