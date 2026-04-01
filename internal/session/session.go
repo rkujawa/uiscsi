@@ -303,10 +303,44 @@ func (s *Session) startPumps(ctx context.Context) {
 	go s.keepaliveLoop(ctx)
 }
 
+// pduHookBridge returns a transport-compatible PDU hook function that bridges
+// to the session-layer typed PDUDirection hook and metrics hook. Returns nil
+// if neither hook is configured, allowing the pump to skip the call entirely.
+func (s *Session) pduHookBridge() func(uint8, *transport.RawPDU) {
+	if s.cfg.pduHook == nil && s.cfg.metricsHook == nil {
+		return nil
+	}
+	return func(dir uint8, raw *transport.RawPDU) {
+		if s.cfg.pduHook != nil {
+			var d PDUDirection
+			if dir == transport.HookReceive {
+				d = PDUReceive
+			}
+			s.cfg.pduHook(d, raw)
+		}
+		if s.cfg.metricsHook != nil {
+			opcode := pdu.OpCode(raw.BHS[0] & 0x3f)
+			dsLen := uint32(raw.BHS[5])<<16 | uint32(raw.BHS[6])<<8 | uint32(raw.BHS[7])
+			if dir == transport.HookSend {
+				s.cfg.metricsHook(MetricEvent{Type: MetricPDUSent, OpCode: opcode})
+				if dsLen > 0 {
+					s.cfg.metricsHook(MetricEvent{Type: MetricBytesOut, Bytes: uint64(dsLen)})
+				}
+			} else {
+				s.cfg.metricsHook(MetricEvent{Type: MetricPDUReceived, OpCode: opcode})
+				if dsLen > 0 {
+					s.cfg.metricsHook(MetricEvent{Type: MetricBytesIn, Bytes: uint64(dsLen)})
+				}
+			}
+		}
+	}
+}
+
 // readPumpLoop runs the transport read pump.
 func (s *Session) readPumpLoop(ctx context.Context, conn *transport.Conn, unsolCh chan *transport.RawPDU) {
 	err := transport.ReadPump(ctx, conn.NetConn(), s.router, unsolCh,
-		conn.DigestHeader(), conn.DigestData())
+		conn.DigestHeader(), conn.DigestData(),
+		s.cfg.logger, s.pduHookBridge())
 	if err != nil && ctx.Err() == nil {
 		// If reconnect info is configured, attempt ERL 0 recovery.
 		if s.targetAddr != "" {
@@ -323,7 +357,8 @@ func (s *Session) readPumpLoop(ctx context.Context, conn *transport.Conn, unsolC
 
 // writePumpLoop runs the transport write pump.
 func (s *Session) writePumpLoop(ctx context.Context, conn *transport.Conn, writeCh chan *transport.RawPDU) {
-	err := transport.WritePump(ctx, conn.NetConn(), writeCh)
+	err := transport.WritePump(ctx, conn.NetConn(), writeCh,
+		s.cfg.logger, s.pduHookBridge())
 	if err != nil && ctx.Err() == nil {
 		s.mu.Lock()
 		if s.err == nil {
@@ -385,6 +420,12 @@ func (s *Session) taskLoop(tk *task, pduCh <-chan *transport.RawPDU) {
 			}
 			tk.handleDataIn(p)
 			if p.HasStatus {
+				if s.cfg.metricsHook != nil {
+					s.cfg.metricsHook(MetricEvent{
+						Type:    MetricCommandComplete,
+						Latency: time.Since(tk.startTime),
+					})
+				}
 				s.cleanupTask(tk.itt)
 				return
 			}
@@ -403,6 +444,12 @@ func (s *Session) taskLoop(tk *task, pduCh <-chan *transport.RawPDU) {
 			s.window.update(p.ExpCmdSN, p.MaxCmdSN)
 			s.updateStatSN(p.StatSN)
 			tk.handleSCSIResponse(p)
+			if s.cfg.metricsHook != nil {
+				s.cfg.metricsHook(MetricEvent{
+					Type:    MetricCommandComplete,
+					Latency: time.Since(tk.startTime),
+				})
+			}
 			s.cleanupTask(tk.itt)
 			return
 

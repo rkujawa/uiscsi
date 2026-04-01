@@ -23,8 +23,9 @@ type task struct {
 	nextOffset uint32
 	isRead     bool
 	isWrite    bool
-	reader     io.Reader // holds cmd.Data for write tasks; exclusively owned by task goroutine after Submit reads immediate data
-	bytesSent  uint32    // cumulative bytes sent: immediate + unsolicited, used for offset tracking
+	reader     io.Reader  // holds cmd.Data for write tasks; exclusively owned by task goroutine after Submit reads immediate data
+	bytesSent  uint32     // cumulative bytes sent: immediate + unsolicited, used for offset tracking
+	startTime  time.Time  // when the task was created, for latency metrics
 
 	// ERL 1 SNACK recovery fields.
 	erl           uint32                   // ErrorRecoveryLevel from negotiated params
@@ -39,10 +40,11 @@ type task struct {
 // allocated (writes don't accumulate Data-In).
 func newTask(itt uint32, isRead bool, isWrite bool) *task {
 	t := &task{
-		itt:      itt,
-		resultCh: make(chan Result, 1),
-		isRead:   isRead,
-		isWrite:  isWrite,
+		itt:       itt,
+		resultCh:  make(chan Result, 1),
+		isRead:    isRead,
+		isWrite:   isWrite,
+		startTime: time.Now(),
 	}
 	if isRead {
 		t.buf = &bytes.Buffer{}
