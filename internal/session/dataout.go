@@ -83,11 +83,8 @@ func (t *task) sendDataOutBurst(writeCh chan<- *transport.RawPDU,
 func (t *task) handleR2T(r2t *pdu.R2T, writeCh chan<- *transport.RawPDU,
 	expStatSN func() uint32, params login.NegotiatedParams) error {
 
-	desired := r2t.DesiredDataTransferLength
 	// Cap at MaxBurstLength per WRITE-05.
-	if desired > params.MaxBurstLength {
-		desired = params.MaxBurstLength
-	}
+	desired := min(r2t.DesiredDataTransferLength, params.MaxBurstLength)
 
 	_, err := t.sendDataOutBurst(writeCh, r2t.TargetTransferTag,
 		r2t.BufferOffset, desired, params.MaxRecvDataSegmentLength, expStatSN)
