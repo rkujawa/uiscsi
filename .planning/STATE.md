@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 06.1 planned (3 plans, 2 waves)
-last_updated: "2026-04-01T20:48:59.111Z"
+stopped_at: Completed 06.1-02-PLAN.md
+last_updated: "2026-04-01T21:05:41.482Z"
 last_activity: 2026-04-01
 progress:
   total_phases: 8
   completed_phases: 6
   total_plans: 22
-  completed_plans: 19
+  completed_plans: 20
   percent: 66
 ---
 
@@ -65,6 +65,7 @@ Progress: [██████░░░░] 66%
 | Phase 05 P01 | 6min | 2 tasks | 11 files |
 | Phase 05 P02 | 4min | 2 tasks | 5 files |
 | Phase 06 P02 | 10min | 2 tasks | 9 files |
+| Phase 06.1 P02 | 4min | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -106,6 +107,9 @@ Recent decisions affecting current work:
 - [Phase 05]: Association field is bits 5-4 of VPD 0x83 descriptor byte 1 (2-bit field)
 - [Phase 06]: Wait for old dispatchLoop done before replacing channels during reconnect (race fix)
 - [Phase 06]: Task stores original Command for ERL 0 retry; reuse resultCh for transparent caller recovery
+- [Phase 06.1]: Direction constants (HookSend/HookReceive) in transport package to avoid session->transport circular dependency
+- [Phase 06.1]: pduHookBridge returns nil when no hooks configured for zero-cost hot path
+- [Phase 06.1]: Push-based MetricEvent callback (no concrete stats struct) per D-11 design
 
 ### Roadmap Evolution
 
@@ -122,6 +126,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-01T20:48:59.099Z
-Stopped at: Phase 06.1 planned (3 plans, 2 waves)
-Resume file: .planning/phases/06.1-observability-and-debugging-infrastructure/06.1-01-PLAN.md
+Last session: 2026-04-01T21:05:41.470Z
+Stopped at: Completed 06.1-02-PLAN.md
+Resume file: None
