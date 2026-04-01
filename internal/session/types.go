@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/rkujawa/uiscsi/internal/login"
+	"github.com/rkujawa/uiscsi/internal/transport"
 )
 
 // Command represents a SCSI command to be submitted via the session.
@@ -116,6 +117,8 @@ type sessionConfig struct {
 	keepaliveInterval    time.Duration
 	keepaliveTimeout     time.Duration
 	asyncHandler         func(AsyncEvent)
+	pduHook              func(PDUDirection, *transport.RawPDU)
+	metricsHook          func(MetricEvent)
 	logger               *slog.Logger
 	maxReconnectAttempts int
 	reconnectBackoff     time.Duration

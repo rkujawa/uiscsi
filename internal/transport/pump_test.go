@@ -3,8 +3,10 @@ package transport
 import (
 	"context"
 	"encoding/binary"
+	"log/slog"
 	"net"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -24,7 +26,7 @@ func TestWritePump_BasicWrite(t *testing.T) {
 	// Start write pump
 	errCh := make(chan error, 1)
 	go func() {
-		errCh <- WritePump(ctx, wConn, writeCh)
+		errCh <- WritePump(ctx, wConn, writeCh, slog.Default(), nil)
 	}()
 
 	// Send 3 PDUs
@@ -73,7 +75,7 @@ func TestReadPump_BasicDispatch(t *testing.T) {
 	// Start read pump
 	errCh := make(chan error, 1)
 	go func() {
-		errCh <- ReadPump(ctx, rConn, router, unsolicitedCh, false, false)
+		errCh <- ReadPump(ctx, rConn, router, unsolicitedCh, false, false, slog.Default(), nil)
 	}()
 
 	// Write 3 PDUs with matching ITTs
@@ -109,7 +111,7 @@ func TestReadPump_UnsolicitedITT(t *testing.T) {
 	defer cancel()
 
 	go func() {
-		ReadPump(ctx, rConn, router, unsolicitedCh, false, false)
+		ReadPump(ctx, rConn, router, unsolicitedCh, false, false, slog.Default(), nil)
 	}()
 
 	// Write PDU with reserved ITT 0xFFFFFFFF
@@ -139,7 +141,7 @@ func TestPump_ConcurrentWriters(t *testing.T) {
 	writeCh := make(chan *RawPDU, 100)
 
 	go func() {
-		WritePump(ctx, wConn, writeCh)
+		WritePump(ctx, wConn, writeCh, slog.Default(), nil)
 	}()
 
 	const writers = 10
@@ -188,10 +190,10 @@ func TestPump_Shutdown(t *testing.T) {
 	readErr := make(chan error, 1)
 
 	go func() {
-		writeErr <- WritePump(ctx, wConn, writeCh)
+		writeErr <- WritePump(ctx, wConn, writeCh, slog.Default(), nil)
 	}()
 	go func() {
-		readErr <- ReadPump(ctx, rConn, router, unsolicitedCh, false, false)
+		readErr <- ReadPump(ctx, rConn, router, unsolicitedCh, false, false, slog.Default(), nil)
 	}()
 
 	// Cancel context to trigger shutdown
@@ -229,8 +231,8 @@ func TestPump_FullRoundTrip(t *testing.T) {
 	writeCh := make(chan *RawPDU, 10)
 
 	// Start write pump on wConn, read pump on rConn
-	go WritePump(ctx, wConn, writeCh)
-	go ReadPump(ctx, rConn, router, unsolicitedCh, false, false)
+	go WritePump(ctx, wConn, writeCh, slog.Default(), nil)
+	go ReadPump(ctx, rConn, router, unsolicitedCh, false, false, slog.Default(), nil)
 
 	// Register an ITT and send a PDU through the write pump
 	itt, respCh := router.Register()
@@ -249,5 +251,192 @@ func TestPump_FullRoundTrip(t *testing.T) {
 		}
 	case <-time.After(2 * time.Second):
 		t.Fatal("timeout on full round trip")
+	}
+}
+
+func TestReadPumpPDUHook(t *testing.T) {
+	rConn, wConn := net.Pipe()
+	defer rConn.Close()
+	defer wConn.Close()
+
+	router := NewRouter()
+	unsolicitedCh := make(chan *RawPDU, 10)
+
+	itt, respCh := router.Register()
+
+	var hookDir uint8
+	var hookRaw *RawPDU
+	var hookCalled atomic.Bool
+
+	hook := func(dir uint8, raw *RawPDU) {
+		hookDir = dir
+		hookRaw = raw
+		hookCalled.Store(true)
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	go ReadPump(ctx, rConn, router, unsolicitedCh, false, false, slog.Default(), hook)
+
+	// Send a PDU with matching ITT.
+	bhs := makeBHS(pdu.OpSCSIResponse, 0, 0)
+	binary.BigEndian.PutUint32(bhs[16:20], itt)
+	writeRawBytes(wConn, bhs, nil, nil, false, false)
+
+	// Wait for dispatch.
+	select {
+	case <-respCh:
+	case <-time.After(2 * time.Second):
+		t.Fatal("timeout waiting for dispatch")
+	}
+
+	if !hookCalled.Load() {
+		t.Fatal("ReadPump PDU hook was not called")
+	}
+	if hookDir != HookReceive {
+		t.Errorf("hook direction = %d, want %d (HookReceive)", hookDir, HookReceive)
+	}
+	if hookRaw == nil {
+		t.Fatal("hook received nil RawPDU")
+	}
+	gotOpcode := hookRaw.BHS[0] & 0x3f
+	if pdu.OpCode(gotOpcode) != pdu.OpSCSIResponse {
+		t.Errorf("hook opcode = 0x%02x, want 0x%02x", gotOpcode, pdu.OpSCSIResponse)
+	}
+}
+
+func TestWritePumpPDUHook(t *testing.T) {
+	rConn, wConn := net.Pipe()
+	defer rConn.Close()
+	defer wConn.Close()
+
+	var hookDir uint8
+	var hookRaw *RawPDU
+	var hookCalled atomic.Bool
+
+	hook := func(dir uint8, raw *RawPDU) {
+		hookDir = dir
+		hookRaw = raw
+		hookCalled.Store(true)
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	writeCh := make(chan *RawPDU, 10)
+
+	go WritePump(ctx, wConn, writeCh, slog.Default(), hook)
+
+	outPDU := &RawPDU{}
+	outPDU.BHS = makeBHS(pdu.OpSCSICommand, 0, 0)
+	writeCh <- outPDU
+
+	// Read the PDU from the other side to ensure WritePump processed it.
+	_, err := ReadRawPDU(rConn, false, false)
+	if err != nil {
+		t.Fatalf("ReadRawPDU: %v", err)
+	}
+
+	if !hookCalled.Load() {
+		t.Fatal("WritePump PDU hook was not called")
+	}
+	if hookDir != HookSend {
+		t.Errorf("hook direction = %d, want %d (HookSend)", hookDir, HookSend)
+	}
+	if hookRaw == nil {
+		t.Fatal("hook received nil RawPDU")
+	}
+	gotOpcode := hookRaw.BHS[0] & 0x3f
+	if pdu.OpCode(gotOpcode) != pdu.OpSCSICommand {
+		t.Errorf("hook opcode = 0x%02x, want 0x%02x", gotOpcode, pdu.OpSCSICommand)
+	}
+}
+
+// logRecord captures slog records for test assertions.
+type logRecord struct {
+	Level   slog.Level
+	Message string
+	Attrs   map[string]any
+}
+
+type captureHandler struct {
+	records []logRecord
+	mu      sync.Mutex
+}
+
+func (h *captureHandler) Enabled(_ context.Context, _ slog.Level) bool { return true }
+
+func (h *captureHandler) Handle(_ context.Context, r slog.Record) error {
+	rec := logRecord{Level: r.Level, Message: r.Message, Attrs: make(map[string]any)}
+	r.Attrs(func(a slog.Attr) bool {
+		rec.Attrs[a.Key] = a.Value.Any()
+		return true
+	})
+	h.mu.Lock()
+	h.records = append(h.records, rec)
+	h.mu.Unlock()
+	return nil
+}
+
+func (h *captureHandler) WithAttrs(_ []slog.Attr) slog.Handler { return h }
+func (h *captureHandler) WithGroup(_ string) slog.Handler      { return h }
+
+func (h *captureHandler) getRecords() []logRecord {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	cp := make([]logRecord, len(h.records))
+	copy(cp, h.records)
+	return cp
+}
+
+func TestReadPumpLogger(t *testing.T) {
+	rConn, wConn := net.Pipe()
+	defer rConn.Close()
+	defer wConn.Close()
+
+	router := NewRouter()
+	unsolicitedCh := make(chan *RawPDU, 10)
+
+	itt, respCh := router.Register()
+
+	handler := &captureHandler{}
+	logger := slog.New(handler)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	go ReadPump(ctx, rConn, router, unsolicitedCh, false, false, logger, nil)
+
+	bhs := makeBHS(pdu.OpSCSIResponse, 0, 0)
+	binary.BigEndian.PutUint32(bhs[16:20], itt)
+	binary.BigEndian.PutUint32(bhs[24:28], 42) // StatSN = 42
+	writeRawBytes(wConn, bhs, nil, nil, false, false)
+
+	select {
+	case <-respCh:
+	case <-time.After(2 * time.Second):
+		t.Fatal("timeout waiting for dispatch")
+	}
+
+	records := handler.getRecords()
+	found := false
+	for _, rec := range records {
+		if rec.Message == "pdu received" {
+			found = true
+			if _, ok := rec.Attrs["stat_sn"]; !ok {
+				t.Error("pdu received log missing stat_sn attribute")
+			}
+			if _, ok := rec.Attrs["opcode"]; !ok {
+				t.Error("pdu received log missing opcode attribute")
+			}
+			if _, ok := rec.Attrs["itt"]; !ok {
+				t.Error("pdu received log missing itt attribute")
+			}
+			break
+		}
+	}
+	if !found {
+		t.Error("no 'pdu received' log record found")
 	}
 }
