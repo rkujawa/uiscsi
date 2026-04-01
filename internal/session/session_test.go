@@ -1,6 +1,7 @@
 package session
 
 import (
+	"bytes"
 	"context"
 	"encoding/binary"
 	"io"
@@ -319,5 +320,51 @@ func TestSessionStatSNTracking(t *testing.T) {
 	// After response with StatSN=1, expStatSN should be 2.
 	if got := sess.getExpStatSN(); got != 2 {
 		t.Fatalf("expStatSN after response: got %d, want 2", got)
+	}
+}
+
+func TestSessionSubmitWriteImmediateData(t *testing.T) {
+	sess, targetConn := newTestSession(t)
+	// Default params: ImmediateData=true, FirstBurstLength=65536, MaxRecvDSL=8192
+
+	writeData := []byte("hello write")
+	cmd := Command{
+		ExpectedDataTransferLen: uint32(len(writeData)),
+		Data:                    bytes.NewReader(writeData),
+	}
+	cmd.CDB[0] = 0x2A // WRITE(10)
+
+	resultCh, err := sess.Submit(context.Background(), cmd)
+	if err != nil {
+		t.Fatalf("Submit: %v", err)
+	}
+
+	// Read the command from target side -- should have immediate data.
+	scsiCmd := readSCSICommandPDU(t, targetConn)
+	if !scsiCmd.Write {
+		t.Fatal("W-bit not set on write command")
+	}
+	if string(scsiCmd.ImmediateData) != "hello write" {
+		t.Fatalf("immediate data: got %q, want %q", scsiCmd.ImmediateData, "hello write")
+	}
+
+	// Send SCSI Response to complete the command.
+	writeSCSIResponsePDU(t, targetConn, &pdu.SCSIResponse{
+		Header:   pdu.Header{InitiatorTaskTag: scsiCmd.InitiatorTaskTag},
+		Status:   0x00,
+		StatSN:   1,
+		ExpCmdSN: 2,
+		MaxCmdSN: 10,
+	})
+
+	result := <-resultCh
+	if result.Err != nil {
+		t.Fatalf("result error: %v", result.Err)
+	}
+	if result.Status != 0x00 {
+		t.Fatalf("status: got 0x%02X, want 0x00", result.Status)
+	}
+	if result.Data != nil {
+		t.Fatal("Data should be nil for write command result")
 	}
 }
