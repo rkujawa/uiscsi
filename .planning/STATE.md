@@ -3,11 +3,11 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 06-02-PLAN.md
-last_updated: "2026-04-01T16:39:13.239Z"
+stopped_at: Phase 06.1 context gathered
+last_updated: "2026-04-01T20:25:20.389Z"
 last_activity: 2026-04-01
 progress:
-  total_phases: 7
+  total_phases: 8
   completed_phases: 6
   total_plans: 19
   completed_plans: 19
@@ -107,6 +107,10 @@ Recent decisions affecting current work:
 - [Phase 06]: Wait for old dispatchLoop done before replacing channels during reconnect (race fix)
 - [Phase 06]: Task stores original Command for ERL 0 retry; reuse resultCh for transparent caller recovery
 
+### Roadmap Evolution
+
+- Phase 06.1 inserted after Phase 6: Observability and Debugging Infrastructure (URGENT) — fill all debugging gaps before E2E testing in Phase 7
+
 ### Pending Todos
 
 None yet.
@@ -118,6 +122,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-01T16:29:05.601Z
-Stopped at: Completed 06-02-PLAN.md
-Resume file: None
+Last session: 2026-04-01T20:25:20.378Z
+Stopped at: Phase 06.1 context gathered
+Resume file: .planning/phases/06.1-observability-and-debugging-infrastructure/06.1-CONTEXT.md
