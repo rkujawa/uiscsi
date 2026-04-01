@@ -86,16 +86,16 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### SCSI Commands — Core
 
-- [ ] **SCSI-01**: TEST UNIT READY
-- [ ] **SCSI-02**: INQUIRY (standard data)
+- [x] **SCSI-01**: TEST UNIT READY
+- [x] **SCSI-02**: INQUIRY (standard data)
 - [ ] **SCSI-03**: INQUIRY VPD pages (0x00 supported pages, 0x80 serial number, 0x83 device identification)
-- [ ] **SCSI-04**: READ CAPACITY (10) and READ CAPACITY (16)
+- [x] **SCSI-04**: READ CAPACITY (10) and READ CAPACITY (16)
 - [ ] **SCSI-05**: READ (10) and READ (16)
 - [ ] **SCSI-06**: WRITE (10) and WRITE (16)
-- [ ] **SCSI-07**: REQUEST SENSE
-- [ ] **SCSI-08**: REPORT LUNS
-- [ ] **SCSI-09**: MODE SENSE (6) and MODE SENSE (10)
-- [ ] **SCSI-10**: Structured sense data parsing (fixed and descriptor formats, sense key, ASC/ASCQ classification)
+- [x] **SCSI-07**: REQUEST SENSE
+- [x] **SCSI-08**: REPORT LUNS
+- [x] **SCSI-09**: MODE SENSE (6) and MODE SENSE (10)
+- [x] **SCSI-10**: Structured sense data parsing (fixed and descriptor formats, sense key, ASC/ASCQ classification)
 
 ### SCSI Commands — Extended
 
@@ -230,16 +230,16 @@ Which phases cover which requirements. Updated during roadmap creation.
 | EVT-03 | Phase 3 | Complete |
 | DISC-01 | Phase 3 | Complete |
 | DISC-02 | Phase 3 | Complete |
-| SCSI-01 | Phase 5 | Pending |
-| SCSI-02 | Phase 5 | Pending |
+| SCSI-01 | Phase 5 | Complete |
+| SCSI-02 | Phase 5 | Complete |
 | SCSI-03 | Phase 5 | Pending |
-| SCSI-04 | Phase 5 | Pending |
+| SCSI-04 | Phase 5 | Complete |
 | SCSI-05 | Phase 5 | Pending |
 | SCSI-06 | Phase 5 | Pending |
-| SCSI-07 | Phase 5 | Pending |
-| SCSI-08 | Phase 5 | Pending |
-| SCSI-09 | Phase 5 | Pending |
-| SCSI-10 | Phase 5 | Pending |
+| SCSI-07 | Phase 5 | Complete |
+| SCSI-08 | Phase 5 | Complete |
+| SCSI-09 | Phase 5 | Complete |
+| SCSI-10 | Phase 5 | Complete |
 | SCSI-11 | Phase 5 | Pending |
 | SCSI-12 | Phase 5 | Pending |
 | SCSI-13 | Phase 5 | Pending |

@@ -99,7 +99,7 @@ Plans:
   5. All CDB builders can be verified with round-trip tests independent of a live iSCSI target
 **Plans:** 3 plans
 Plans:
-- [ ] 05-01-PLAN.md — Foundation types, sense parsing, core commands (TUR, INQUIRY, READ CAPACITY, REQUEST SENSE, REPORT LUNS, MODE SENSE)
+- [x] 05-01-PLAN.md — Foundation types, sense parsing, core commands (TUR, INQUIRY, READ CAPACITY, REQUEST SENSE, REPORT LUNS, MODE SENSE)
 - [ ] 05-02-PLAN.md — READ/WRITE 10/16 CDB builders and VPD page parsers (0x00, 0x80, 0x83, 0xB0, 0xB1, 0xB2)
 - [ ] 05-03-PLAN.md — Extended commands (SYNC CACHE, WRITE SAME, UNMAP, VERIFY, PR IN/OUT, COMPARE AND WRITE, START STOP UNIT)
 

@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 5 context gathered
-last_updated: "2026-04-01T12:14:51.433Z"
+stopped_at: Completed 05-01-PLAN.md
+last_updated: "2026-04-01T12:49:16.271Z"
 last_activity: 2026-04-01
 progress:
   total_phases: 7
   completed_phases: 4
-  total_plans: 13
-  completed_plans: 13
+  total_plans: 16
+  completed_plans: 14
   percent: 0
 ---
 
@@ -62,6 +62,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 03 P03 | 4min | 2 tasks | 3 files |
 | Phase 04 P01 | 5min | 3 tasks | 5 files |
 | Phase 04 P03 | 9min | 2 tasks | 1 files |
+| Phase 05 P01 | 6min | 2 tasks | 11 files |
 
 ## Accumulated Context
 
@@ -96,6 +97,9 @@ Recent decisions affecting current work:
 - [Phase 04]: Auto-set W-bit when cmd.Data \!= nil -- callers don't need to set both Data and Write
 - [Phase 04]: Immediate data bounded by min(FirstBurstLength, MaxRecvDataSegmentLength) per RFC 7143
 - [Phase 04]: Matrix test uses 2048B payload with FirstBurstLength=1024, MaxRecvDSL=512 to exercise all four write mode paths
+- [Phase 05]: ~70 ASC/ASCQ entries in lookup table covering common SPC-4 Annex D codes
+- [Phase 05]: checkResult helper centralizes status check + sense parse + data read for all parse functions
+- [Phase 05]: CDB builder pattern: plain functions return session.Command with packed CDB bytes
 
 ### Pending Todos
 
@@ -108,6 +112,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-01T12:14:51.421Z
-Stopped at: Phase 5 context gathered
-Resume file: .planning/phases/05-scsi-command-layer/05-CONTEXT.md
+Last session: 2026-04-01T12:49:16.259Z
+Stopped at: Completed 05-01-PLAN.md
+Resume file: None
