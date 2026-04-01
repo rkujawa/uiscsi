@@ -25,16 +25,17 @@ type LoginOption func(*loginConfig)
 
 // loginConfig holds all parameters for a login attempt.
 type loginConfig struct {
-	targetName   string
-	sessionType  string // "Normal" or "Discovery"
+	targetName    string
+	sessionType   string // "Normal" or "Discovery"
 	initiatorName string
-	chapUser     string
-	chapSecret   string
-	mutualCHAP   bool
-	targetSecret string
-	headerDigest []string // preference list
-	dataDigest   []string // preference list
-	isid         [6]byte
+	chapUser      string
+	chapSecret    string
+	mutualCHAP    bool
+	targetSecret  string
+	headerDigest  []string // preference list
+	dataDigest    []string // preference list
+	isid          [6]byte
+	tsih          uint16 // non-zero for session reinstatement (ERL 2)
 }
 
 // WithTarget sets the target IQN for the login.
@@ -98,6 +99,15 @@ func WithISID(isid [6]byte) LoginOption {
 	}
 }
 
+// WithTSIH sets the TSIH for session reinstatement. Non-zero TSIH
+// indicates this is a reconnection to an existing session (ERL 2
+// connection replacement). Per RFC 7143 Section 7.4.
+func WithTSIH(tsih uint16) LoginOption {
+	return func(c *loginConfig) {
+		c.tsih = tsih
+	}
+}
+
 // Login performs the iSCSI login phase on an already-established transport
 // connection. It negotiates security (AuthMethod=None or CHAP) and
 // operational parameters, returning the negotiated parameters on success.
@@ -132,6 +142,7 @@ func Login(ctx context.Context, tc *transport.Conn, opts ...LoginOption) (*Negot
 		cmdSN:     1,
 		expStatSN: 0,
 		isid:      cfg.isid,
+		tsih:      cfg.tsih,
 	}
 
 	// Initialize CHAP state if credentials provided.

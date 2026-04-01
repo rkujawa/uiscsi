@@ -40,6 +40,12 @@ type Session struct {
 	err       error
 
 	cfg sessionConfig
+
+	// Reconnect context for ERL 0/2 recovery.
+	targetAddr string
+	loginOpts  []login.LoginOption
+	isid       [6]byte
+	tsih       uint16
 }
 
 // NewSession creates a Session from a post-login transport connection
@@ -54,25 +60,27 @@ func NewSession(conn *transport.Conn, params login.NegotiatedParams, opts ...Ses
 	ctx, cancel := context.WithCancel(context.Background())
 
 	s := &Session{
-		conn:      conn,
-		params:    params,
-		router:    transport.NewRouter(),
-		writeCh:   make(chan *transport.RawPDU, 64),
-		unsolCh:   make(chan *transport.RawPDU, 16),
-		window:    newCmdWindow(params.CmdSN, params.CmdSN, params.CmdSN),
-		expStatSN: params.ExpStatSN,
-		tasks:     make(map[uint32]*task),
-		loggedIn:  true,
-		cancel:    cancel,
-		done:      make(chan struct{}),
-		cfg:       cfg,
+		conn:       conn,
+		params:     params,
+		router:     transport.NewRouter(),
+		writeCh:    make(chan *transport.RawPDU, 64),
+		unsolCh:    make(chan *transport.RawPDU, 16),
+		window:     newCmdWindow(params.CmdSN, params.CmdSN, params.CmdSN),
+		expStatSN:  params.ExpStatSN,
+		tasks:      make(map[uint32]*task),
+		loggedIn:   true,
+		cancel:     cancel,
+		done:       make(chan struct{}),
+		cfg:        cfg,
+		targetAddr: cfg.targetAddr,
+		loginOpts:  cfg.loginOpts,
+		tsih:       params.TSIH,
 	}
 
-	// Start background goroutines.
-	go s.readPumpLoop(ctx)
-	go s.writePumpLoop(ctx)
-	go s.dispatchLoop(ctx)
-	go s.keepaliveLoop(ctx)
+	// Start background goroutines. Capture conn/channels locally so
+	// replaceConnection can safely replace s.conn/s.writeCh/s.unsolCh
+	// without racing with goroutines that use the old values.
+	s.startPumps(ctx)
 
 	return s
 }
@@ -258,10 +266,25 @@ func (s *Session) getExpStatSN() uint32 {
 	return s.expStatSN
 }
 
+// startPumps starts the background goroutines for the session. It captures
+// current conn/channel values locally so that replaceConnection can safely
+// replace them on the Session struct without racing with old goroutines.
+func (s *Session) startPumps(ctx context.Context) {
+	conn := s.conn
+	writeCh := s.writeCh
+	unsolCh := s.unsolCh
+	done := s.done
+
+	go s.readPumpLoop(ctx, conn, unsolCh)
+	go s.writePumpLoop(ctx, conn, writeCh)
+	go s.dispatchLoop(ctx, unsolCh, done)
+	go s.keepaliveLoop(ctx)
+}
+
 // readPumpLoop runs the transport read pump.
-func (s *Session) readPumpLoop(ctx context.Context) {
-	err := transport.ReadPump(ctx, s.conn.NetConn(), s.router, s.unsolCh,
-		s.conn.DigestHeader(), s.conn.DigestData())
+func (s *Session) readPumpLoop(ctx context.Context, conn *transport.Conn, unsolCh chan *transport.RawPDU) {
+	err := transport.ReadPump(ctx, conn.NetConn(), s.router, unsolCh,
+		conn.DigestHeader(), conn.DigestData())
 	if err != nil && ctx.Err() == nil {
 		s.mu.Lock()
 		if s.err == nil {
@@ -272,8 +295,8 @@ func (s *Session) readPumpLoop(ctx context.Context) {
 }
 
 // writePumpLoop runs the transport write pump.
-func (s *Session) writePumpLoop(ctx context.Context) {
-	err := transport.WritePump(ctx, s.conn.NetConn(), s.writeCh)
+func (s *Session) writePumpLoop(ctx context.Context, conn *transport.Conn, writeCh chan *transport.RawPDU) {
+	err := transport.WritePump(ctx, conn.NetConn(), writeCh)
 	if err != nil && ctx.Err() == nil {
 		s.mu.Lock()
 		if s.err == nil {
@@ -284,13 +307,13 @@ func (s *Session) writePumpLoop(ctx context.Context) {
 }
 
 // dispatchLoop handles unsolicited PDUs (ITT=0xFFFFFFFF) from the target.
-func (s *Session) dispatchLoop(ctx context.Context) {
-	defer close(s.done)
+func (s *Session) dispatchLoop(ctx context.Context, unsolCh chan *transport.RawPDU, done chan struct{}) {
+	defer close(done)
 	for {
 		select {
 		case <-ctx.Done():
 			return
-		case raw, ok := <-s.unsolCh:
+		case raw, ok := <-unsolCh:
 			if !ok {
 				return
 			}
