@@ -4,8 +4,10 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"time"
 
 	"github.com/rkujawa/uiscsi/internal/pdu"
+	"github.com/rkujawa/uiscsi/internal/transport"
 )
 
 // task represents an in-flight SCSI command. It correlates request ITT
@@ -23,6 +25,13 @@ type task struct {
 	isWrite    bool
 	reader     io.Reader // holds cmd.Data for write tasks; exclusively owned by task goroutine after Submit reads immediate data
 	bytesSent  uint32    // cumulative bytes sent: immediate + unsolicited, used for offset tracking
+
+	// ERL 1 SNACK recovery fields.
+	erl           uint32                   // ErrorRecoveryLevel from negotiated params
+	writeCh       chan<- *transport.RawPDU  // session write channel for sending SNACKs
+	expStatSNFunc func() uint32            // returns current ExpStatSN
+	snackTimeout  time.Duration            // per-task SNACK timeout for tail loss detection
+	snack         *snackState              // SNACK recovery state (nil until gap detected or timer started)
 }
 
 // newTask creates a task for the given ITT. If isRead is true, a buffer
@@ -45,11 +54,35 @@ func newTask(itt uint32, isRead bool, isWrite bool) *task {
 // and BufferOffset for in-order delivery, appends data to the buffer, and
 // delivers a Result if the S-bit indicates status is present.
 func (t *task) handleDataIn(din *pdu.DataIn) {
+	// Reset per-task SNACK timeout on every received Data-In (D-06 tail loss safety net).
+	if t.erl >= 1 && t.snackTimeout > 0 {
+		t.resetSnackTimer(t.snackTimeout, t.writeCh, t.expStatSNFunc)
+	}
+
 	if din.DataSN != t.nextDataSN {
+		if t.erl >= 1 {
+			// ERL 1: SNACK recovery (D-05, D-07).
+			gap := din.DataSN - t.nextDataSN
+			if t.snack == nil {
+				t.snack = newSnackState()
+			}
+			t.snack.gapDetected = true
+			t.snack.pendingDataIn[din.DataSN] = din
+
+			// Send SNACK for the gap.
+			expStatSN := t.expStatSNFunc()
+			if err := t.sendSNACK(t.writeCh, SNACKTypeDataR2T, t.nextDataSN, gap, expStatSN); err != nil {
+				t.resultCh <- Result{Err: fmt.Errorf("session: SNACK send failed: %w", err)}
+			}
+			return
+		}
+
+		// ERL 0: fatal gap (existing behavior).
 		err := fmt.Errorf("session: DataSN gap: got %d, want %d", din.DataSN, t.nextDataSN)
 		t.resultCh <- Result{Err: err}
 		return
 	}
+
 	if din.BufferOffset != t.nextOffset {
 		err := fmt.Errorf("session: BufferOffset mismatch: got %d, want %d", din.BufferOffset, t.nextOffset)
 		t.resultCh <- Result{Err: err}
@@ -63,8 +96,18 @@ func (t *task) handleDataIn(din *pdu.DataIn) {
 	t.nextDataSN++
 	t.nextOffset += uint32(len(din.Data))
 
+	// After processing in-order PDU, drain any buffered out-of-order PDUs.
+	if t.snack != nil && len(t.snack.pendingDataIn) > 0 {
+		t.drainPendingDataIn()
+		// If drainPendingDataIn sent a result (HasStatus), we are done.
+		if len(t.resultCh) > 0 {
+			return
+		}
+	}
+
 	if din.HasStatus {
 		// S-bit: this Data-In carries status. Deliver result with buffered data.
+		t.stopSnackTimer()
 		t.resultCh <- Result{
 			Status:        din.Status,
 			Data:          bytes.NewReader(t.buf.Bytes()),

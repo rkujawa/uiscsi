@@ -25,8 +25,8 @@ type LoginOption func(*loginConfig)
 
 // loginConfig holds all parameters for a login attempt.
 type loginConfig struct {
-	targetName   string
-	sessionType  string // "Normal" or "Discovery"
+	targetName    string
+	sessionType   string // "Normal" or "Discovery"
 	initiatorName string
 	chapUser     string
 	chapSecret   string
@@ -35,7 +35,7 @@ type loginConfig struct {
 	headerDigest []string // preference list
 	dataDigest   []string // preference list
 	isid         [6]byte
-	tsih         uint16
+	tsih         uint16 // non-zero for session reinstatement
 }
 
 // WithTarget sets the target IQN for the login.
@@ -141,8 +141,8 @@ func Login(ctx context.Context, tc *transport.Conn, opts ...LoginOption) (*Negot
 		csg:       stageSecurityNegotiation,
 		cmdSN:     1,
 		expStatSN: 0,
-		tsih:      cfg.tsih,
 		isid:      cfg.isid,
+		tsih:      cfg.tsih,
 	}
 
 	// Initialize CHAP state if credentials provided.

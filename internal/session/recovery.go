@@ -137,9 +137,9 @@ func (s *Session) reconnect(cause error) {
 	s.mu.Unlock()
 
 	// Step 5: Start new pump goroutines.
-	go s.readPumpLoop(newCtx)
-	go s.writePumpLoop(newCtx)
-	go s.dispatchLoop(newCtx)
+	go s.readPumpLoop(newCtx, s.conn, s.unsolCh)
+	go s.writePumpLoop(newCtx, s.conn, s.writeCh)
+	go s.dispatchLoop(newCtx, s.unsolCh, s.done)
 	go s.keepaliveLoop(newCtx)
 
 	// Step 6: Retry snapshotted tasks.

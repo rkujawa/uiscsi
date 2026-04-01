@@ -189,9 +189,9 @@ func WithSNACKTimeout(d time.Duration) SessionOption {
 	}
 }
 
-// WithReconnectInfo configures the session for ERL 0 automatic reconnection.
-// The target address and login options are stored so the session can re-dial
-// and re-login after a connection drop, reinstating with same ISID+TSIH.
+// WithReconnectInfo configures the session for ERL 0 automatic reconnection
+// and ERL 2 connection replacement. The target address and login options are
+// stored so the session can re-dial and re-login after a connection drop.
 func WithReconnectInfo(addr string, loginOpts ...login.LoginOption) SessionOption {
 	return func(c *sessionConfig) {
 		c.targetAddr = addr
