@@ -203,3 +203,24 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
 | 7. Public API, Observability, and Release | 0/3 | Planning complete | - |
 | 8. lsscsi-style discovery utility | 0/2 | Planning complete | - |
 | 9. LIO-based E2E test suite | 0/2 | Planning complete | - |
+
+### Phase 10: E2E test coverage expansion (UNH-IOL compliance gaps)
+
+**Goal:** Close critical E2E test gaps identified by UNH-IOL iSCSI initiator test suite comparison. Add tests for: large data transfers exceeding MaxBurstLength (multi-R2T sequences), login parameter negotiation boundaries (FirstBurstLength vs MaxBurstLength, ImmediateData×InitialR2T 2×2 matrix), ERL 1/2 error recovery against real LIO target, additional TMFs (ABORT TASK with concurrent commands, TARGET WARM RESET), digest variants (header-only, data-only), and SCSI error condition handling (sense data, out-of-range LBA). All tests run against real kernel LIO target via test/lio/ helper.
+**Requirements**: E2E-11, E2E-12, E2E-13, E2E-14, E2E-15, E2E-16, E2E-17, E2E-18, E2E-19, E2E-20
+**Depends on:** Phase 9
+**Success Criteria** (what must be TRUE):
+- Large write (>MaxBurstLength) triggers R2T and completes with data integrity verified
+- Login parameter negotiation tests cover ImmediateData×InitialR2T 2×2 matrix against real target
+- ERL 1 SNACK/DataACK test exercises within-connection recovery (or documents LIO limitation)
+- ERL 2 connection replacement test exercises session-level recovery (or documents LIO limitation)
+- ABORT TASK TMF sent during concurrent long-running SCSI command
+- TARGET WARM RESET TMF executes and session survives
+- Header-only and data-only digest modes negotiated and exercised separately
+- SCSI CHECK CONDITION with sense data parsed and reported correctly
+- Out-of-range LBA write returns expected ILLEGAL REQUEST sense key
+- All new tests skip gracefully when not root or modules not loaded
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 10 to break down)
