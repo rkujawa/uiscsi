@@ -116,6 +116,16 @@ func WithMetricsHook(h func(MetricEvent)) Option {
 	}
 }
 
+// WithOperationalOverrides overrides login negotiation parameters.
+// Keys must match RFC 7143 Section 13 key names exactly (e.g.,
+// "InitialR2T", "ImmediateData", "MaxBurstLength", "ErrorRecoveryLevel").
+// Values replace the defaults proposed during login negotiation.
+func WithOperationalOverrides(overrides map[string]string) Option {
+	return func(c *dialConfig) {
+		c.loginOpts = append(c.loginOpts, login.WithOperationalOverrides(overrides))
+	}
+}
+
 // WithMaxReconnectAttempts sets the maximum number of ERL 0 reconnect attempts.
 func WithMaxReconnectAttempts(n int) Option {
 	return func(c *dialConfig) {

@@ -35,9 +35,10 @@ type loginConfig struct {
 	targetSecret string
 	headerDigest []string // preference list
 	dataDigest   []string // preference list
-	isid         [6]byte
-	tsih         uint16 // non-zero for session reinstatement
-	logger       *slog.Logger
+	isid                 [6]byte
+	tsih                 uint16 // non-zero for session reinstatement
+	logger               *slog.Logger
+	operationalOverrides map[string]string
 }
 
 // WithTarget sets the target IQN for the login.
@@ -105,6 +106,16 @@ func WithISID(isid [6]byte) LoginOption {
 func WithLoginLogger(l *slog.Logger) LoginOption {
 	return func(c *loginConfig) {
 		c.logger = l
+	}
+}
+
+// WithOperationalOverrides overrides login negotiation parameters.
+// Keys must match RFC 7143 Section 13 key names exactly (e.g.,
+// "InitialR2T", "ImmediateData", "MaxBurstLength", "ErrorRecoveryLevel").
+// Values replace the defaults proposed during login negotiation.
+func WithOperationalOverrides(overrides map[string]string) LoginOption {
+	return func(c *loginConfig) {
+		c.operationalOverrides = overrides
 	}
 }
 
@@ -498,7 +509,7 @@ func (ls *loginState) sendLogin(ctx context.Context, keys []KeyValue, transit bo
 // buildInitiatorKeys constructs the operational parameter key-value pairs
 // that the initiator proposes during login negotiation.
 func buildInitiatorKeys(cfg *loginConfig) []KeyValue {
-	return []KeyValue{
+	keys := []KeyValue{
 		{Key: "HeaderDigest", Value: strings.Join(cfg.headerDigest, ",")},
 		{Key: "DataDigest", Value: strings.Join(cfg.dataDigest, ",")},
 		{Key: "MaxConnections", Value: "1"},
@@ -514,6 +525,14 @@ func buildInitiatorKeys(cfg *loginConfig) []KeyValue {
 		{Key: "DataSequenceInOrder", Value: "Yes"},
 		{Key: "ErrorRecoveryLevel", Value: "0"},
 	}
+	if cfg.operationalOverrides != nil {
+		for i, kv := range keys {
+			if override, ok := cfg.operationalOverrides[kv.Key]; ok {
+				keys[i].Value = override
+			}
+		}
+	}
+	return keys
 }
 
 // findKeyDef looks up a key definition from the registry by name.
