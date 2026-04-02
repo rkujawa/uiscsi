@@ -186,3 +186,13 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
 | 6. Error Recovery and Task Management | 0/3 | Planning complete | - |
 | 7. Public API, Observability, and Release | 0/3 | Planning complete | - |
 | 8. lsscsi-style discovery utility | 0/2 | Planning complete | - |
+
+### Phase 9: LIO-based E2E test suite
+
+**Goal:** Build `test/lio/` helper package for configfs-based LIO target setup/teardown, implement E2E tests covering CHAP, digests, data integrity, multi-LUN, and error recovery against a real kernel iSCSI target. Drop gotgt stubs. Local execution only (CI deferred).
+**Requirements**: TBD
+**Depends on:** Phase 7
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 9 to break down)
