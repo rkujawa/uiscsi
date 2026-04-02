@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: verifying
-stopped_at: Completed Wave 1 (10-01, 10-02)
-last_updated: "2026-04-02T23:23:00.000Z"
+stopped_at: Completed 10-03-PLAN.md
+last_updated: "2026-04-02T23:27:43.553Z"
 last_activity: 2026-04-02
 progress:
   total_phases: 11
-  completed_phases: 10
+  completed_phases: 11
   total_plans: 32
-  completed_plans: 30
+  completed_plans: 32
   percent: 92
 ---
 
@@ -76,6 +76,7 @@ Progress: [█████████░] 92%
 | Phase 09 P02 | 3min | 2 tasks | 6 files |
 | Phase 10 P01 | 2min | 2 tasks | 4 files |
 | Phase 10 P02 | 2min | 2 tasks | 2 files |
+| Phase 10 P03 | 2min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -139,6 +140,8 @@ Recent decisions affecting current work:
 - [Phase 09]: ss -K for TCP connection kill in recovery tests (no TCP proxy needed)
 - [Phase 09]: AbortTask not E2E tested (synchronous tests cannot create in-flight tasks); LUNReset validates TMF path
 - [Phase 10]: operationalOverrides patches buildInitiatorKeys in-place without changing key order
+- [Phase 10]: Accept TMF response 0 or 5 for AbortTask (command may complete before abort)
+- [Phase 10]: ERL 1/2 tests best-effort per D-04 with configfs param + t.Skip fallback
 
 ### Roadmap Evolution
 
@@ -163,6 +166,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-02T23:23:00.000Z
-Stopped at: Completed Wave 1 (10-01, 10-02)
+Last session: 2026-04-02T23:27:43.548Z
+Stopped at: Completed 10-03-PLAN.md
 Resume file: None
