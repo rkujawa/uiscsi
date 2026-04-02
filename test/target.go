@@ -544,7 +544,9 @@ func (mt *MockTarget) HandleTMF() {
 			},
 			Response: 0, // Function complete
 			StatSN:   statSN,
-			ExpCmdSN: req.CmdSN + 1,
+			// TMF is Immediate — does not advance CmdSN per RFC 7143 Section 3.2.2.1.
+			// ExpCmdSN must NOT be incremented for immediate commands.
+			ExpCmdSN: req.CmdSN,
 			MaxCmdSN: req.CmdSN + 10,
 		}
 		return tc.SendPDU(resp)

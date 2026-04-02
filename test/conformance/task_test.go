@@ -20,6 +20,7 @@ func setupTMFTarget(t *testing.T) (*testutil.MockTarget, *uiscsi.Session) {
 
 	tgt.HandleLogin()
 	tgt.HandleLogout()
+	tgt.HandleNOPOut()
 	tgt.HandleTMF()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
