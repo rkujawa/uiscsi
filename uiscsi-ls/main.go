@@ -3,7 +3,7 @@
 //
 // Usage:
 //
-//	uiscsi-ls --portal <addr> [--portal <addr2>] [--json] [--chap-user U] [--chap-secret S]
+//	uiscsi-ls --portal <addr> [--portal <addr2>] [--json] [--initiator-name IQN] [--chap-user U] [--chap-secret S]
 package main
 
 import (
@@ -29,6 +29,7 @@ func (s *stringSlice) Set(v string) error {
 func main() {
 	var portals stringSlice
 	flag.Var(&portals, "portal", "iSCSI target portal address (repeatable)")
+	initiatorName := flag.String("initiator-name", "", "initiator IQN (default: library-generated)")
 	chapUser := flag.String("chap-user", "", "CHAP username (or ISCSI_CHAP_USER env)")
 	chapSecret := flag.String("chap-secret", "", "CHAP secret (or ISCSI_CHAP_SECRET env)")
 	jsonOutput := flag.Bool("json", false, "output as JSON")
@@ -36,7 +37,7 @@ func main() {
 
 	if len(portals) == 0 {
 		fmt.Fprintf(os.Stderr, "error: at least one --portal is required\n\n")
-		fmt.Fprintf(os.Stderr, "Usage: %s --portal <addr> [--portal <addr2>] [--json] [--chap-user U] [--chap-secret S]\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "Usage: %s --portal <addr> [--portal <addr2>] [--json] [--initiator-name IQN] [--chap-user U] [--chap-secret S]\n", os.Args[0])
 		os.Exit(1)
 	}
 
@@ -48,6 +49,9 @@ func main() {
 	// Resolve CHAP credentials: flags take precedence over env vars.
 	user, secret := resolveCHAP(*chapUser, *chapSecret)
 	var opts []uiscsi.Option
+	if *initiatorName != "" {
+		opts = append(opts, uiscsi.WithInitiatorName(*initiatorName))
+	}
 	if user != "" && secret != "" {
 		opts = append(opts, uiscsi.WithCHAP(user, secret))
 	}
