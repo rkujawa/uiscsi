@@ -207,7 +207,7 @@ Plans:
 
 Plans:
 - [x] 10-01-PLAN.md — WithOperationalOverrides option, large write multi-R2T test, 2x2 negotiation matrix test
-- [ ] 10-02-PLAN.md — Digest variants (header-only, data-only) and SCSI error condition tests
+- [x] 10-02-PLAN.md — Digest variants (header-only, data-only) and SCSI error condition tests
 - [ ] 10-03-PLAN.md — ABORT TASK and TARGET WARM RESET TMFs, ERL 1/2 error recovery tests
 
 ## Progress
