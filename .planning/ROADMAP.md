@@ -154,6 +154,23 @@ Plans:
 - [ ] 07-02-PLAN.md — Mock target infrastructure and IOL-inspired conformance test suite
 - [x] 07-03-PLAN.md — Documentation: godoc examples, example programs, README
 
+### Phase 8: lsscsi-style discovery utility
+
+**Goal:** Build a standalone CLI tool (`uiscsi-ls`) that performs iSCSI target discovery on specified portals and presents LUN information in lsscsi-style columnar format or JSON, using the uiscsi library as its backend.
+**Requirements**: CLI-01, CLI-02, CLI-03, CLI-04, CLI-05, CLI-06
+**Depends on:** Phase 7
+**Success Criteria** (what must be TRUE):
+  1. `uiscsi-ls --portal <addr>` discovers targets, connects to each, probes all LUNs, and displays results in lsscsi-style columnar format
+  2. `--json` flag produces machine-parseable nested JSON output
+  3. CHAP credentials resolve from flags with env var fallback
+  4. Multiple portals can be specified via repeated `--portal` flags
+  5. Unreachable portals are skipped with errors to stderr; remaining portals still probed
+**Plans:** 2 plans
+
+Plans:
+- [ ] 08-01-PLAN.md — Go module setup, result types, device type table, formatters with tests
+- [ ] 08-02-PLAN.md — Probe pipeline, CLI main.go with flag parsing, signal handling, exit codes
+
 ## Progress
 
 **Execution Order:**
@@ -168,13 +185,4 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
 | 5. SCSI Command Layer | 2/3 | In Progress|  |
 | 6. Error Recovery and Task Management | 0/3 | Planning complete | - |
 | 7. Public API, Observability, and Release | 0/3 | Planning complete | - |
-
-### Phase 8: lsscsi-style discovery utility
-
-**Goal:** Build a standalone CLI tool that performs iSCSI target discovery on a specified portal and presents output similar to Linux lsscsi, using the uiscsi library as its backend.
-**Requirements**: TBD
-**Depends on:** Phase 7
-**Plans:** 0 plans
-
-Plans:
-- [ ] TBD (run /gsd:plan-phase 8 to break down)
+| 8. lsscsi-style discovery utility | 0/2 | Planning complete | - |
