@@ -24,19 +24,21 @@ Full RFC 7143 compliance as a composable Go library — the spec is non-negotiab
 
 - [x] All 19 SCSI commands with typed CDB builders and response parsers — Validated in Phase 5: SCSI Command Layer (TEST UNIT READY through START STOP UNIT, sense data parsing, VPD pages, 100+ subtests)
 
+- [x] SendTargets discovery to enumerate available targets and LUNs — Validated in Phase 7: Public API (Discover() wraps session.Discover, conformance test TestLogin_Discovery)
+- [x] iSCSI full feature phase: SCSI command PDUs, data-in/out, R2T handling — Validated in Phase 3-4 (session/read/write path), exposed in Phase 7 via Session methods
+- [x] Error recovery level 0 (session-level reconnection) — Validated in Phase 6: Error Recovery (WithReconnectInfo, exponential backoff)
+- [x] Error recovery level 1 (within-connection PDU retransmission) — Validated in Phase 6: Error Recovery (SNACK/DataACK)
+- [x] Error recovery level 2 (connection-level recovery within session) — Validated in Phase 6: Error Recovery (connection allegiance reassignment)
+- [x] Task management: ABORT TASK, ABORT TASK SET, LUN RESET, TARGET WARM/COLD RESET — Validated in Phase 6: Error Recovery + Phase 7 public API (6 TMF methods on Session)
+- [x] Async event/message handling from target — Validated in Phase 6: Error Recovery (AsyncEvent, WithAsyncHandler option)
+- [x] Low-level API: raw CDB pass-through (user builds CDB bytes, library transports) — Validated in Phase 7: Public API (Session.Execute with ExecuteOption)
+- [x] High-level API: typed Go functions (ReadBlocks, WriteBlocks, Inquiry, TestUnitReady, etc.) — Validated in Phase 7: Public API (25 Session methods)
+- [x] IOL-inspired integration test suite covering full feature phase conformance — Validated in Phase 7: Test Infrastructure (22 conformance tests across 4 IOL categories)
+- [x] Comprehensive examples for developer onboarding — Validated in Phase 7: Documentation (7 godoc examples, 4 standalone programs, README)
+
 ### Active
 
-- [ ] SendTargets discovery to enumerate available targets and LUNs
-- [ ] iSCSI full feature phase: SCSI command PDUs, data-in/out, R2T handling
-- [ ] Error recovery level 0 (session-level reconnection)
-- [ ] Error recovery level 1 (within-connection PDU retransmission)
-- [ ] Error recovery level 2 (connection-level recovery within session)
-- [ ] Task management: ABORT TASK, ABORT TASK SET, LUN RESET, TARGET WARM/COLD RESET
-- [ ] Async event/message handling from target
-- [ ] Low-level API: raw CDB pass-through (user builds CDB bytes, library transports)
-- [ ] High-level API: typed Go functions (ReadBlocks, WriteBlocks, Inquiry, TestUnitReady, etc.)
-- [ ] IOL-inspired integration test suite covering full feature phase conformance
-- [ ] Comprehensive examples for developer onboarding
+(No active requirements — all v1.0 requirements validated)
 
 ### Out of Scope
 
@@ -92,4 +94,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-01 after Phase 06.1 completion — observability and debugging infrastructure (digest verification, PDU stringers, hooks, metrics, structured logging, enriched errors)*
+*Last updated: 2026-04-02 after Phase 07 completion — public API surface, conformance test suite, documentation and examples. All v1.0 requirements validated.*
