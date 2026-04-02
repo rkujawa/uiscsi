@@ -146,11 +146,6 @@ None yet.
 
 ## Session Continuity
 
-<<<<<<< Updated upstream
 Last session: 2026-04-02T12:14:39.265Z
 Stopped at: Phase 8 context gathered
-=======
-Last session: 2026-04-02T08:55:48.530Z
-Stopped at: Completed 07-02-PLAN.md
->>>>>>> Stashed changes
 Resume file: .planning/phases/08-lsscsi-discovery-utility/08-CONTEXT.md
