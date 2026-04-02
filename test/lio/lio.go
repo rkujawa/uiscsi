@@ -318,13 +318,14 @@ func Setup(t *testing.T, cfg Config) (*Target, func()) {
 			setupFatalf("set authentication=1: %v", err)
 		}
 	} else {
-		// No CHAP — use demo mode with auto-generated ACLs.
+		// No CHAP — disable authentication and allow AuthMethod=None.
 		if err := writeConfigfs(filepath.Join(tpgDir, "attrib", "authentication"), "0"); err != nil {
 			setupFatalf("set authentication=0: %v", err)
 		}
 		if err := writeConfigfs(filepath.Join(tpgDir, "param", "AuthMethod"), "CHAP,None"); err != nil {
 			setupFatalf("set AuthMethod=CHAP,None: %v", err)
 		}
+
 		if err := writeConfigfs(filepath.Join(tpgDir, "attrib", "generate_node_acls"), "1"); err != nil {
 			setupFatalf("set generate_node_acls=1: %v", err)
 		}

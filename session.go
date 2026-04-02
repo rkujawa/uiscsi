@@ -97,16 +97,28 @@ func (s *Session) Inquiry(ctx context.Context, lun uint64) (*InquiryData, error)
 // ReadCapacity returns the capacity of the specified LUN.
 // It uses READ CAPACITY(16) for full 64-bit LBA support.
 func (s *Session) ReadCapacity(ctx context.Context, lun uint64) (*Capacity, error) {
+	// Try ReadCapacity16 first (supports >2TB devices).
 	cmd := scsi.ReadCapacity16(lun, 32)
 	result, err := s.submitAndWait(ctx, cmd)
 	if err != nil {
 		return nil, err
 	}
-	resp, err := scsi.ParseReadCapacity16(result)
+	resp16, err := scsi.ParseReadCapacity16(result)
+	if err == nil {
+		return convertCapacity16(resp16), nil
+	}
+	// Fallback to ReadCapacity10 — some targets (LIO with auto-ACLs)
+	// return CHECK CONDITION for SERVICE ACTION IN on non-zero LUNs.
+	cmd10 := scsi.ReadCapacity10(lun)
+	result10, err := s.submitAndWait(ctx, cmd10)
+	if err != nil {
+		return nil, err
+	}
+	resp10, err := scsi.ParseReadCapacity10(result10)
 	if err != nil {
 		return nil, wrapSCSIError(err)
 	}
-	return convertCapacity16(resp), nil
+	return convertCapacity10(resp10), nil
 }
 
 // TestUnitReady checks whether the specified LUN is ready.

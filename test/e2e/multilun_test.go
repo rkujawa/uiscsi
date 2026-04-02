@@ -63,9 +63,18 @@ func TestMultiLUN(t *testing.T) {
 		}
 	}
 
-	// Verify capacities match configured sizes (within block alignment).
+	// Verify each LUN is accessible via Inquiry and has correct capacity.
 	expectedSizes := []int64{32 * 1024 * 1024, 64 * 1024 * 1024, 128 * 1024 * 1024}
 	for i, lunID := range expectedLUNs {
+		// Inquiry first — also clears any UNIT ATTENTION condition on
+		// first LUN access (power on / reset).
+		inq, err := sess.Inquiry(ctx, lunID)
+		if err != nil {
+			t.Errorf("Inquiry(LUN %d): %v", lunID, err)
+			continue
+		}
+		t.Logf("LUN %d: VendorID=%q ProductID=%q", lunID, inq.VendorID, inq.ProductID)
+
 		cap, err := sess.ReadCapacity(ctx, lunID)
 		if err != nil {
 			t.Errorf("ReadCapacity(LUN %d): %v", lunID, err)
@@ -86,13 +95,5 @@ func TestMultiLUN(t *testing.T) {
 		if totalBytes != expectedBytes {
 			t.Errorf("LUN %d: capacity %d bytes, expected %d bytes", lunID, totalBytes, expectedBytes)
 		}
-
-		// Inquiry each LUN.
-		inq, err := sess.Inquiry(ctx, lunID)
-		if err != nil {
-			t.Errorf("Inquiry(LUN %d): %v", lunID, err)
-			continue
-		}
-		t.Logf("LUN %d: VendorID=%q ProductID=%q", lunID, inq.VendorID, inq.ProductID)
 	}
 }
