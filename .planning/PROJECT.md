@@ -94,4 +94,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-02 after Phase 07 completion — public API surface, conformance test suite, documentation and examples. All v1.0 requirements validated.*
+*Last updated: 2026-04-02 after Phase 10 completion — E2E test coverage expansion for UNH-IOL compliance gaps (large write multi-R2T, 2x2 negotiation matrix, ERL 1/2, TMFs, digest variants, SCSI error handling). All v1.0 requirements validated.*
