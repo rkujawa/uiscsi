@@ -38,16 +38,13 @@ created: 2026-04-02
 
 | Task ID | Plan | Wave | Requirement | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|-----------|-------------------|-------------|--------|
-| 10-01-01 | 01 | 1 | E2E-11 | e2e | `sudo go test -tags e2e -v -count=1 ./test/e2e/ -run TestLargeWrite` | ❌ W0 | ⬜ pending |
-| 10-02-01 | 02 | 1 | E2E-12 | e2e | `sudo go test -tags e2e -v -count=1 ./test/e2e/ -run TestNegotiation` | ❌ W0 | ⬜ pending |
-| 10-03-01 | 03 | 2 | E2E-13 | e2e | `sudo go test -tags e2e -v -count=1 ./test/e2e/ -run TestERL1` | ❌ W0 | ⬜ pending |
-| 10-03-02 | 03 | 2 | E2E-14 | e2e | `sudo go test -tags e2e -v -count=1 ./test/e2e/ -run TestERL2` | ❌ W0 | ⬜ pending |
-| 10-04-01 | 04 | 2 | E2E-15 | e2e | `sudo go test -tags e2e -v -count=1 ./test/e2e/ -run TestTMF_AbortTask` | ❌ W0 | ⬜ pending |
-| 10-04-02 | 04 | 2 | E2E-16 | e2e | `sudo go test -tags e2e -v -count=1 ./test/e2e/ -run TestTMF_TargetWarmReset` | ❌ W0 | ⬜ pending |
-| 10-05-01 | 05 | 1 | E2E-17 | e2e | `sudo go test -tags e2e -v -count=1 ./test/e2e/ -run TestDigest_HeaderOnly` | ❌ W0 | ⬜ pending |
-| 10-05-02 | 05 | 1 | E2E-18 | e2e | `sudo go test -tags e2e -v -count=1 ./test/e2e/ -run TestDigest_DataOnly` | ❌ W0 | ⬜ pending |
-| 10-06-01 | 06 | 1 | E2E-19 | e2e | `sudo go test -tags e2e -v -count=1 ./test/e2e/ -run TestSCSIError` | ❌ W0 | ⬜ pending |
-| 10-06-02 | 06 | 1 | E2E-20 | e2e | `go test -tags e2e -v -count=1 ./test/e2e/ -run TestBasicConnectivity` (non-root) | ✅ | ⬜ pending |
+| 10-01-T1 | 01 | 1 | E2E-11, E2E-12 | e2e | `sudo go test -tags e2e -v -count=1 ./test/e2e/ -run TestLargeWrite` | ❌ inline | ⬜ pending |
+| 10-01-T2 | 01 | 1 | E2E-12 | e2e | `sudo go test -tags e2e -v -count=1 ./test/e2e/ -run TestNegotiation` | ❌ inline | ⬜ pending |
+| 10-02-T1 | 02 | 1 | E2E-17, E2E-18 | e2e | `sudo go test -tags e2e -v -count=1 ./test/e2e/ -run TestDigest` | ❌ inline | ⬜ pending |
+| 10-02-T2 | 02 | 1 | E2E-19 | e2e | `sudo go test -tags e2e -v -count=1 ./test/e2e/ -run TestSCSIError` | ❌ inline | ⬜ pending |
+| 10-03-T1 | 03 | 2 | E2E-15, E2E-16 | e2e | `sudo go test -tags e2e -v -count=1 ./test/e2e/ -run TestTMF` | ❌ inline | ⬜ pending |
+| 10-03-T2 | 03 | 2 | E2E-13, E2E-14 | e2e | `sudo go test -tags e2e -v -count=1 ./test/e2e/ -run TestERL` | ❌ inline | ⬜ pending |
+| 10-all | 01, 02, 03 | 1, 2 | E2E-20 | e2e | `go test -tags e2e -v -count=1 ./test/e2e/ -run TestBasicConnectivity` (non-root) | ✅ | ⬜ pending |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
