@@ -171,6 +171,22 @@ Plans:
 - [x] 08-01-PLAN.md — Go module setup, result types, device type table, formatters with tests
 - [x] 08-02-PLAN.md — Probe pipeline, CLI main.go with flag parsing, signal handling, exit codes
 
+### Phase 9: LIO-based E2E test suite
+
+**Goal:** Build `test/lio/` helper package for configfs-based LIO target setup/teardown, implement E2E tests covering CHAP, digests, data integrity, multi-LUN, and error recovery against a real kernel iSCSI target. Drop gotgt stubs. Local execution only (CI deferred).
+**Requirements**: E2E-01, E2E-02, E2E-03, E2E-04, E2E-05, E2E-06, E2E-07, E2E-08, E2E-09, E2E-10
+**Depends on:** Phase 7
+**Success Criteria** (what must be TRUE):
+  1. `test/lio/` helper creates and tears down real LIO iSCSI targets via configfs with correct ordering
+  2. All 7 E2E scenarios pass against a real kernel iSCSI target when run as root
+  3. Tests skip gracefully with clear messages when not root or kernel modules not loaded
+  4. Dead gotgt integration stubs are removed
+**Plans:** 2 plans
+
+Plans:
+- [ ] 09-01-PLAN.md — LIO configfs helper package, orphan sweep, basic connectivity E2E test, delete gotgt stubs
+- [ ] 09-02-PLAN.md — Data integrity, CHAP, digest, multi-LUN, TMF, and error recovery E2E tests
+
 ## Progress
 
 **Execution Order:**
@@ -186,13 +202,4 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
 | 6. Error Recovery and Task Management | 0/3 | Planning complete | - |
 | 7. Public API, Observability, and Release | 0/3 | Planning complete | - |
 | 8. lsscsi-style discovery utility | 0/2 | Planning complete | - |
-
-### Phase 9: LIO-based E2E test suite
-
-**Goal:** Build `test/lio/` helper package for configfs-based LIO target setup/teardown, implement E2E tests covering CHAP, digests, data integrity, multi-LUN, and error recovery against a real kernel iSCSI target. Drop gotgt stubs. Local execution only (CI deferred).
-**Requirements**: TBD
-**Depends on:** Phase 7
-**Plans:** 0 plans
-
-Plans:
-- [ ] TBD (run /gsd:plan-phase 9 to break down)
+| 9. LIO-based E2E test suite | 0/2 | Planning complete | - |
