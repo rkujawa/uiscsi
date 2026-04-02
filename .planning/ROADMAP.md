@@ -226,4 +226,4 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
 | 7. Public API, Observability, and Release | 0/3 | Planning complete | - |
 | 8. lsscsi-style discovery utility | 0/2 | Planning complete | - |
 | 9. LIO-based E2E test suite | 0/2 | Planning complete | - |
-| 10. E2E test coverage expansion | 3/3 | Complete   | 2026-04-02 |
+| 10. E2E test coverage expansion | 3/3 | Complete    | 2026-04-02 |
