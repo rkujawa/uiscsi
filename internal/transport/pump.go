@@ -21,7 +21,7 @@ const (
 // from writeCh and serializes them to w one at a time, preventing TCP byte
 // interleaving (Pitfall 7). Returns when ctx is cancelled or writeCh is closed.
 func WritePump(ctx context.Context, w io.Writer, writeCh <-chan *RawPDU,
-	logger *slog.Logger, pduHook func(uint8, *RawPDU)) error {
+	logger *slog.Logger, pduHook func(uint8, *RawPDU), digestByteOrder binary.ByteOrder) error {
 	for {
 		select {
 		case <-ctx.Done():
@@ -44,7 +44,7 @@ func WritePump(ctx context.Context, w io.Writer, writeCh <-chan *RawPDU,
 					"cmd_sn", cmdSN,
 					"ds_len", dsLen)
 			}
-			if err := WriteRawPDU(w, p); err != nil {
+			if err := WriteRawPDU(w, p, digestByteOrder); err != nil {
 				return err
 			}
 		}
@@ -58,7 +58,7 @@ func WritePump(ctx context.Context, w io.Writer, writeCh <-chan *RawPDU,
 // (connection closed) or ctx is cancelled.
 func ReadPump(ctx context.Context, r io.Reader, router *Router,
 	unsolicitedCh chan<- *RawPDU, digestHeader, digestData bool,
-	logger *slog.Logger, pduHook func(uint8, *RawPDU), maxRecvDSL uint32) error {
+	logger *slog.Logger, pduHook func(uint8, *RawPDU), maxRecvDSL uint32, digestByteOrder binary.ByteOrder) error {
 	for {
 		// Check cancellation before each read.
 		select {
@@ -67,7 +67,7 @@ func ReadPump(ctx context.Context, r io.Reader, router *Router,
 		default:
 		}
 
-		raw, err := ReadRawPDU(r, digestHeader, digestData, maxRecvDSL)
+		raw, err := ReadRawPDU(r, digestHeader, digestData, maxRecvDSL, digestByteOrder)
 		if err != nil {
 			// Check if context was cancelled during the read.
 			select {
