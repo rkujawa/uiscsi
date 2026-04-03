@@ -274,3 +274,26 @@ func TestCHAPExchangeUnsupportedAlgorithm(t *testing.T) {
 		t.Error("processChallenge with unsupported algorithm should return error")
 	}
 }
+
+func TestNewCHAPState_ReturnsNoError(t *testing.T) {
+	// Non-mutual: no randomness needed, should always succeed.
+	cs, err := newCHAPState("user", "secret", false, "")
+	if err != nil {
+		t.Fatalf("unexpected error for non-mutual: %v", err)
+	}
+	if cs == nil {
+		t.Fatal("expected non-nil chapState")
+	}
+
+	// Mutual: generates random ID and challenge, should succeed.
+	cs, err = newCHAPState("user", "secret", true, "mutualSecret")
+	if err != nil {
+		t.Fatalf("unexpected error for mutual: %v", err)
+	}
+	if cs == nil {
+		t.Fatal("expected non-nil chapState")
+	}
+	if len(cs.initiatorChallenge) != 16 {
+		t.Fatalf("expected 16-byte challenge, got %d", len(cs.initiatorChallenge))
+	}
+}

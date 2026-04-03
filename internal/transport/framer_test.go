@@ -486,3 +486,50 @@ func TestFramerReadRawPDU_HeaderDigestMismatchWithAHS(t *testing.T) {
 		t.Errorf("DigestError.Expected = 0x%08X, want 0x%08X", de.Expected, expected)
 	}
 }
+
+func TestReadRawPDU_ExceedsMaxRecvDSL(t *testing.T) {
+	rConn, wConn := net.Pipe()
+	defer rConn.Close()
+	defer wConn.Close()
+
+	// Build a PDU with dsLen=1024.
+	bhs := makeBHS(0x25, 0, 1024)
+	data := make([]byte, 1024)
+
+	go func() {
+		wConn.Write(bhs[:])
+		wConn.Write(data)
+	}()
+
+	// maxRecvDSL=512 should reject the PDU.
+	_, err := ReadRawPDU(rConn, false, false, 512)
+	if err == nil {
+		t.Fatal("expected error for dsLen exceeding maxRecvDSL")
+	}
+	if !bytes.Contains([]byte(err.Error()), []byte("exceeds MaxRecvDataSegmentLength")) {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestReadRawPDU_MaxRecvDSLZeroUnlimited(t *testing.T) {
+	rConn, wConn := net.Pipe()
+	defer rConn.Close()
+	defer wConn.Close()
+
+	bhs := makeBHS(0x25, 0, 64)
+	data := make([]byte, 64)
+
+	go func() {
+		wConn.Write(bhs[:])
+		wConn.Write(data)
+	}()
+
+	// maxRecvDSL=0 means unlimited — should succeed.
+	raw, err := ReadRawPDU(rConn, false, false, 0)
+	if err != nil {
+		t.Fatalf("maxRecvDSL=0 should allow any size: %v", err)
+	}
+	if len(raw.DataSegment) != 64 {
+		t.Fatalf("expected 64-byte data segment, got %d", len(raw.DataSegment))
+	}
+}
