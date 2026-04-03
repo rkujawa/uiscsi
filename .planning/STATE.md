@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: verifying
-stopped_at: Completed 10-03-PLAN.md
-last_updated: "2026-04-02T23:31:51.447Z"
+stopped_at: Completed 10-04-PLAN.md
+last_updated: "2026-04-03T00:13:45.312Z"
 last_activity: 2026-04-02
 progress:
   total_phases: 11
-  completed_phases: 11
-  total_plans: 32
-  completed_plans: 32
+  completed_phases: 10
+  total_plans: 34
+  completed_plans: 33
   percent: 92
 ---
 
@@ -77,6 +77,7 @@ Progress: [█████████░] 92%
 | Phase 10 P01 | 2min | 2 tasks | 4 files |
 | Phase 10 P02 | 2min | 2 tasks | 2 files |
 | Phase 10 P03 | 2min | 2 tasks | 2 files |
+| Phase 10 P04 | 2min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -142,6 +143,8 @@ Recent decisions affecting current work:
 - [Phase 10]: operationalOverrides patches buildInitiatorKeys in-place without changing key order
 - [Phase 10]: Accept TMF response 0 or 5 for AbortTask (command may complete before abort)
 - [Phase 10]: ERL 1/2 tests best-effort per D-04 with configfs param + t.Skip fallback
+- [Phase 10]: OpReject in unsolicited path logs+updates counters; in task path cancels task with error
+- [Phase 10]: SenseLength prefix stripped with bounds-checked slice for graceful degradation
 
 ### Roadmap Evolution
 
@@ -166,6 +169,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-02T23:27:43.548Z
-Stopped at: Completed 10-03-PLAN.md
+Last session: 2026-04-03T00:13:45.307Z
+Stopped at: Completed 10-04-PLAN.md
 Resume file: None
