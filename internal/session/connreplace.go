@@ -111,14 +111,13 @@ func (s *Session) replaceConnection(cause error) error {
 	// Per RFC 7143 Section 7.2.2, task reassignment uses TMF with
 	// Function=TASK REASSIGN and ReferencedTaskTag=task's ITT.
 	for itt, tk := range taskSnapshot {
-		// Unregister old router entry.
-		s.router.Unregister(itt)
-
-		// Allocate new ITT for reassigned task.
+		// Allocate new ITT for reassigned task BEFORE unregistering old one.
 		newITT := s.router.AllocateITT()
-		pduCh := s.router.RegisterPersistent(newITT)
+		newPduCh := s.router.RegisterPersistent(newITT)
 
-		// Send TASK REASSIGN TMF.
+		// Send TASK REASSIGN TMF referencing the OLD ITT.
+		// The old ITT remains registered so any in-flight target responses
+		// are still routed correctly during the reassignment window.
 		tmfResult, tmfErr := s.sendTMF(newCtx, TMFTaskReassign, itt, tk.lun)
 		if tmfErr != nil || (tmfResult != nil && tmfResult.Response != TMFRespComplete) {
 			// Reassign failed -- fail this task.
@@ -126,10 +125,16 @@ func (s *Session) replaceConnection(cause error) error {
 			if tmfResult != nil {
 				respStr = fmt.Sprintf("response=%d", tmfResult.Response)
 			}
+			// Clean up the new ITT we allocated but won't use.
 			s.router.Unregister(newITT)
+			// NOW unregister the old ITT since we're giving up.
+			s.router.Unregister(itt)
 			tk.cancel(fmt.Errorf("session: task reassign failed: %s: %v", respStr, tmfErr))
 			continue
 		}
+
+		// TMF TASK REASSIGN confirmed -- NOW safe to unregister old ITT.
+		s.router.Unregister(itt)
 
 		// Update task with new ITT.
 		s.mu.Lock()
@@ -139,7 +144,7 @@ func (s *Session) replaceConnection(cause error) error {
 		s.mu.Unlock()
 
 		// Restart task loop on new channel.
-		go s.taskLoop(tk, pduCh)
+		go s.taskLoop(tk, newPduCh)
 	}
 
 	s.cfg.logger.Info("session: ERL 2 connection replacement complete",

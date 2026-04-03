@@ -300,6 +300,15 @@ func (s *Session) getExpStatSN() uint32 {
 	return s.expStatSN
 }
 
+// getWriteCh returns the current write channel under lock.
+// This ensures goroutines always send on the current (not stale) channel
+// after a reconnect replaces s.writeCh.
+func (s *Session) getWriteCh() chan<- *transport.RawPDU {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.writeCh
+}
+
 // stampDigests computes and attaches header and/or data digests to an
 // outgoing RawPDU based on the current connection's negotiated digest flags.
 // This must be called before sending any PDU to writeCh during full-feature

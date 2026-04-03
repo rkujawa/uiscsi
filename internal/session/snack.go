@@ -2,6 +2,7 @@ package session
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"time"
 
@@ -25,7 +26,7 @@ func newSnackState() *snackState {
 // sendSNACK builds and sends a SNACK Request for missing Data-In PDUs.
 // Per RFC 7143 Section 11.16, the SNACK carries the task's ITT (Pitfall 4).
 // Per D-05, D-07.
-func (t *task) sendSNACK(writeCh chan<- *transport.RawPDU, snackType uint8, begRun, runLength uint32, expStatSN uint32) error {
+func (t *task) sendSNACK(getWriteCh func() chan<- *transport.RawPDU, snackType uint8, begRun, runLength uint32, expStatSN uint32) error {
 	snack := &pdu.SNACKReq{
 		Header: pdu.Header{
 			Final:            true,
@@ -43,11 +44,18 @@ func (t *task) sendSNACK(writeCh chan<- *transport.RawPDU, snackType uint8, begR
 	}
 
 	raw := &transport.RawPDU{BHS: bhs}
+
+	// Use blocking send with 5-second timeout per RFC 7143 Section 11.16
+	// which requires reliable SNACK transmission.
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	writeCh := getWriteCh()
 	select {
 	case writeCh <- raw:
 		return nil
-	default:
-		return fmt.Errorf("session: writeCh full, cannot send SNACK")
+	case <-ctx.Done():
+		return fmt.Errorf("session: SNACK send timed out after 5s (writeCh blocked)")
 	}
 }
 
@@ -90,7 +98,7 @@ func (t *task) drainPendingDataIn() {
 // request the missing Status/final Data-In PDU -- this handles the
 // tail loss case where the last Data-In PDUs are dropped and no
 // further PDUs arrive to trigger gap detection.
-func (t *task) startSnackTimer(timeout time.Duration, writeCh chan<- *transport.RawPDU, expStatSNFunc func() uint32) {
+func (t *task) startSnackTimer(timeout time.Duration, getWriteCh func() chan<- *transport.RawPDU, expStatSNFunc func() uint32) {
 	if t.snack == nil {
 		t.snack = newSnackState()
 	}
@@ -102,17 +110,17 @@ func (t *task) startSnackTimer(timeout time.Duration, writeCh chan<- *transport.
 		// Tail loss detected: no Data-In arrived within snackTimeout.
 		// Send Status SNACK to request the missing final status.
 		expStatSN := expStatSNFunc()
-		_ = t.sendSNACK(writeCh, SNACKTypeStatus, 0, 0, expStatSN)
+		_ = t.sendSNACK(getWriteCh, SNACKTypeStatus, 0, 0, expStatSN)
 	})
 }
 
 // resetSnackTimer resets the per-task SNACK timeout. Called on each
 // received Data-In PDU to push the timeout window forward.
-func (t *task) resetSnackTimer(timeout time.Duration, writeCh chan<- *transport.RawPDU, expStatSNFunc func() uint32) {
+func (t *task) resetSnackTimer(timeout time.Duration, getWriteCh func() chan<- *transport.RawPDU, expStatSNFunc func() uint32) {
 	if t.snack != nil && t.snack.timer != nil {
 		t.snack.timer.Stop()
 	}
-	t.startSnackTimer(timeout, writeCh, expStatSNFunc)
+	t.startSnackTimer(timeout, getWriteCh, expStatSNFunc)
 }
 
 // stopSnackTimer stops the per-task SNACK timeout. Called when the

@@ -15,7 +15,7 @@ func TestSNACK(t *testing.T) {
 		expStatSNFunc := func() uint32 { return 42 }
 		tk := newTask(10, true, false)
 		tk.erl = 1
-		tk.writeCh = writeCh
+		tk.getWriteCh = func() chan<- *transport.RawPDU { return writeCh }
 		tk.expStatSNFunc = expStatSNFunc
 		tk.snackTimeout = 0 // disable timer for this test
 
@@ -67,7 +67,7 @@ func TestSNACK(t *testing.T) {
 		expStatSNFunc := func() uint32 { return 42 }
 		tk := newTask(10, true, false)
 		tk.erl = 1
-		tk.writeCh = writeCh
+		tk.getWriteCh = func() chan<- *transport.RawPDU { return writeCh }
 		tk.expStatSNFunc = expStatSNFunc
 		tk.snackTimeout = 0
 
@@ -141,7 +141,7 @@ func TestSNACK(t *testing.T) {
 		expStatSNFunc := func() uint32 { return 99 }
 		tk := newTask(42, true, false)
 		tk.erl = 1
-		tk.writeCh = writeCh
+		tk.getWriteCh = func() chan<- *transport.RawPDU { return writeCh }
 		tk.expStatSNFunc = expStatSNFunc
 		tk.snackTimeout = 0
 
@@ -162,7 +162,7 @@ func TestSNACK(t *testing.T) {
 		expStatSNFunc := func() uint32 { return 0 }
 		tk := newTask(10, true, false)
 		tk.erl = 1
-		tk.writeCh = writeCh
+		tk.getWriteCh = func() chan<- *transport.RawPDU { return writeCh }
 		tk.expStatSNFunc = expStatSNFunc
 		tk.snackTimeout = 0
 
@@ -207,7 +207,7 @@ func TestSNACK(t *testing.T) {
 		expStatSNFunc := func() uint32 { return 50 }
 		tk := newTask(10, true, false)
 		tk.erl = 1
-		tk.writeCh = writeCh
+		tk.getWriteCh = func() chan<- *transport.RawPDU { return writeCh }
 		tk.expStatSNFunc = expStatSNFunc
 		tk.snackTimeout = 100 * time.Millisecond
 
@@ -215,7 +215,7 @@ func TestSNACK(t *testing.T) {
 		tk.handleDataIn(&pdu.DataIn{DataSN: 0, BufferOffset: 0, Data: []byte("x")})
 
 		// Start the SNACK timer explicitly (simulating what happens at task creation for ERL >= 1).
-		tk.startSnackTimer(tk.snackTimeout, tk.writeCh, tk.expStatSNFunc)
+		tk.startSnackTimer(tk.snackTimeout, tk.getWriteCh, tk.expStatSNFunc)
 
 		// Wait for timeout to fire.
 		time.Sleep(200 * time.Millisecond)
@@ -240,12 +240,12 @@ func TestSNACK(t *testing.T) {
 		expStatSNFunc := func() uint32 { return 50 }
 		tk := newTask(10, true, false)
 		tk.erl = 1
-		tk.writeCh = writeCh
+		tk.getWriteCh = func() chan<- *transport.RawPDU { return writeCh }
 		tk.expStatSNFunc = expStatSNFunc
 		tk.snackTimeout = 200 * time.Millisecond
 
 		// Start the SNACK timer.
-		tk.startSnackTimer(tk.snackTimeout, tk.writeCh, tk.expStatSNFunc)
+		tk.startSnackTimer(tk.snackTimeout, tk.getWriteCh, tk.expStatSNFunc)
 
 		// Feed DataSN=0 at t=0, which resets timer via handleDataIn.
 		tk.handleDataIn(&pdu.DataIn{DataSN: 0, BufferOffset: 0, Data: []byte("a")})

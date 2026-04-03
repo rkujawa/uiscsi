@@ -29,11 +29,11 @@ type task struct {
 	startTime  time.Time  // when the task was created, for latency metrics
 
 	// ERL 1 SNACK recovery fields.
-	erl           uint32                   // ErrorRecoveryLevel from negotiated params
-	writeCh       chan<- *transport.RawPDU  // session write channel for sending SNACKs
-	expStatSNFunc func() uint32            // returns current ExpStatSN
-	snackTimeout  time.Duration            // per-task SNACK timeout for tail loss detection
-	snack         *snackState              // SNACK recovery state (nil until gap detected or timer started)
+	erl           uint32                              // ErrorRecoveryLevel from negotiated params
+	getWriteCh    func() chan<- *transport.RawPDU      // returns current write channel (survives reconnect)
+	expStatSNFunc func() uint32                       // returns current ExpStatSN
+	snackTimeout  time.Duration                       // per-task SNACK timeout for tail loss detection
+	snack         *snackState                         // SNACK recovery state (nil until gap detected or timer started)
 }
 
 // newTask creates a task for the given ITT. If isRead is true, a buffer
@@ -59,7 +59,7 @@ func newTask(itt uint32, isRead bool, isWrite bool) *task {
 func (t *task) handleDataIn(din *pdu.DataIn) {
 	// Reset per-task SNACK timeout on every received Data-In (D-06 tail loss safety net).
 	if t.erl >= 1 && t.snackTimeout > 0 {
-		t.resetSnackTimer(t.snackTimeout, t.writeCh, t.expStatSNFunc)
+		t.resetSnackTimer(t.snackTimeout, t.getWriteCh, t.expStatSNFunc)
 	}
 
 	if din.DataSN != t.nextDataSN {
@@ -74,7 +74,7 @@ func (t *task) handleDataIn(din *pdu.DataIn) {
 
 			// Send SNACK for the gap.
 			expStatSN := t.expStatSNFunc()
-			if err := t.sendSNACK(t.writeCh, SNACKTypeDataR2T, t.nextDataSN, gap, expStatSN); err != nil {
+			if err := t.sendSNACK(t.getWriteCh, SNACKTypeDataR2T, t.nextDataSN, gap, expStatSN); err != nil {
 				t.resultCh <- Result{Err: fmt.Errorf("session: SNACK send failed: %w", err)}
 			}
 			return
