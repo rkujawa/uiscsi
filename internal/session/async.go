@@ -77,7 +77,7 @@ func (s *Session) handleAsyncMsg(raw *transport.RawPDU) {
 // If no handler is registered, the event is logged and discarded.
 func (s *Session) dispatchAsyncEvent(evt AsyncEvent) {
 	if s.cfg.asyncHandler != nil {
-		s.cfg.asyncHandler(evt)
+		s.cfg.asyncHandler(context.Background(), evt)
 		return
 	}
 	s.cfg.logger.Warn("session: async event received but no handler registered",

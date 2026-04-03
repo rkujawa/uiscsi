@@ -2,6 +2,8 @@
 package uiscsi
 
 import (
+	"context"
+	"encoding/binary"
 	"log/slog"
 	"time"
 
@@ -84,10 +86,10 @@ func WithKeepaliveTimeout(d time.Duration) Option {
 }
 
 // WithAsyncHandler registers an async event callback.
-func WithAsyncHandler(h func(AsyncEvent)) Option {
+func WithAsyncHandler(h func(context.Context, AsyncEvent)) Option {
 	return func(c *dialConfig) {
-		c.sessionOpts = append(c.sessionOpts, session.WithAsyncHandler(func(ae session.AsyncEvent) {
-			h(convertAsyncEvent(ae))
+		c.sessionOpts = append(c.sessionOpts, session.WithAsyncHandler(func(ctx context.Context, ae session.AsyncEvent) {
+			h(ctx, convertAsyncEvent(ae))
 		}))
 	}
 }
@@ -95,14 +97,14 @@ func WithAsyncHandler(h func(AsyncEvent)) Option {
 // WithPDUHook registers a PDU send/receive hook. The []byte argument is the
 // concatenation of BHS (48 bytes) + DataSegment from the internal
 // transport.RawPDU. This avoids exposing internal transport types.
-func WithPDUHook(h func(PDUDirection, []byte)) Option {
+func WithPDUHook(h func(context.Context, PDUDirection, []byte)) Option {
 	return func(c *dialConfig) {
-		c.sessionOpts = append(c.sessionOpts, session.WithPDUHook(func(dir session.PDUDirection, raw *transport.RawPDU) {
+		c.sessionOpts = append(c.sessionOpts, session.WithPDUHook(func(ctx context.Context, dir session.PDUDirection, raw *transport.RawPDU) {
 			pubDir := PDUDirection(dir)
 			data := make([]byte, len(raw.BHS)+len(raw.DataSegment))
 			copy(data, raw.BHS[:])
 			copy(data[len(raw.BHS):], raw.DataSegment)
-			h(pubDir, data)
+			h(ctx, pubDir, data)
 		}))
 	}
 }
@@ -123,6 +125,15 @@ func WithMetricsHook(h func(MetricEvent)) Option {
 func WithOperationalOverrides(overrides map[string]string) Option {
 	return func(c *dialConfig) {
 		c.loginOpts = append(c.loginOpts, login.WithOperationalOverrides(overrides))
+	}
+}
+
+// WithDigestByteOrder sets the byte order for CRC32C digest values on the wire.
+// Default is LittleEndian (matches Linux LIO target). Set to binary.BigEndian
+// for targets that use network byte order for digests.
+func WithDigestByteOrder(bo binary.ByteOrder) Option {
+	return func(c *dialConfig) {
+		c.sessionOpts = append(c.sessionOpts, session.WithDigestByteOrder(bo))
 	}
 }
 

@@ -4,6 +4,8 @@
 package session
 
 import (
+	"context"
+	"encoding/binary"
 	"errors"
 	"io"
 	"log/slog"
@@ -116,8 +118,8 @@ type SessionOption func(*sessionConfig)
 type sessionConfig struct {
 	keepaliveInterval    time.Duration
 	keepaliveTimeout     time.Duration
-	asyncHandler         func(AsyncEvent)
-	pduHook              func(PDUDirection, *transport.RawPDU)
+	asyncHandler         func(context.Context, AsyncEvent)
+	pduHook              func(context.Context, PDUDirection, *transport.RawPDU)
 	metricsHook          func(MetricEvent)
 	logger               *slog.Logger
 	maxReconnectAttempts int
@@ -125,6 +127,7 @@ type sessionConfig struct {
 	snackTimeout         time.Duration
 	targetAddr           string
 	loginOpts            []login.LoginOption
+	digestByteOrder      binary.ByteOrder
 }
 
 // defaultConfig returns a sessionConfig with sensible defaults.
@@ -155,7 +158,7 @@ func WithKeepaliveTimeout(d time.Duration) SessionOption {
 
 // WithAsyncHandler registers a callback invoked for each AsyncMsg received
 // from the target. If nil, async events are logged and discarded.
-func WithAsyncHandler(h func(AsyncEvent)) SessionOption {
+func WithAsyncHandler(h func(context.Context, AsyncEvent)) SessionOption {
 	return func(c *sessionConfig) {
 		c.asyncHandler = h
 	}
@@ -189,6 +192,13 @@ func WithReconnectBackoff(base time.Duration) SessionOption {
 func WithSNACKTimeout(d time.Duration) SessionOption {
 	return func(c *sessionConfig) {
 		c.snackTimeout = d
+	}
+}
+
+// WithDigestByteOrder sets the byte order for CRC32C digest values.
+func WithDigestByteOrder(bo binary.ByteOrder) SessionOption {
+	return func(c *sessionConfig) {
+		c.digestByteOrder = bo
 	}
 }
 

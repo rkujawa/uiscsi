@@ -1,6 +1,7 @@
 package session
 
 import (
+	"context"
 	"testing"
 
 	"github.com/rkujawa/uiscsi/internal/transport"
@@ -45,7 +46,7 @@ func TestMetricEventType_String(t *testing.T) {
 
 func TestWithPDUHook(t *testing.T) {
 	called := false
-	hook := func(PDUDirection, *transport.RawPDU) { called = true }
+	hook := func(context.Context, PDUDirection, *transport.RawPDU) { called = true }
 
 	cfg := defaultConfig()
 	WithPDUHook(hook)(&cfg)
@@ -55,7 +56,7 @@ func TestWithPDUHook(t *testing.T) {
 	}
 
 	// Verify the hook is the one we set by calling it.
-	cfg.pduHook(PDUSend, &transport.RawPDU{})
+	cfg.pduHook(context.Background(), PDUSend, &transport.RawPDU{})
 	if !called {
 		t.Error("WithPDUHook: hook was not invoked")
 	}

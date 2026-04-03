@@ -2,6 +2,7 @@ package transport
 
 import (
 	"context"
+	"encoding/binary"
 	"net"
 	"time"
 )
@@ -18,6 +19,10 @@ type Conn struct {
 	// MaxRecvDataSegmentLength -- enforced at transport layer (D-06).
 	// Zero means not yet negotiated.
 	maxRecvDSL uint32
+
+	// digestByteOrder controls the byte order for CRC32C digest values.
+	// Defaults to LittleEndian (matches Linux LIO target).
+	digestByteOrder binary.ByteOrder
 }
 
 // NewConnFromNetConn wraps an existing net.Conn as a transport Conn.
@@ -75,3 +80,23 @@ func (c *Conn) SetMaxRecvDSL(maxDSL uint32) {
 // MaxRecvDSL returns the negotiated MaxRecvDataSegmentLength.
 // Zero means not yet negotiated (no limit enforced).
 func (c *Conn) MaxRecvDSL() uint32 { return c.maxRecvDSL }
+
+// SetDigestByteOrder configures the byte order used for reading and writing
+// CRC32C digest values on the wire. Defaults to LittleEndian, which matches
+// the Linux kernel iSCSI target (LIO) and open-iscsi initiator.
+//
+// Some targets (notably certain enterprise SAN firmware) use BigEndian.
+// RFC 7143 Section 12.1 does not specify byte order for digest values;
+// this is an interoperability parameter.
+func (c *Conn) SetDigestByteOrder(bo binary.ByteOrder) {
+	c.digestByteOrder = bo
+}
+
+// DigestByteOrder returns the configured digest byte order.
+// Returns LittleEndian if not explicitly set.
+func (c *Conn) DigestByteOrder() binary.ByteOrder {
+	if c.digestByteOrder == nil {
+		return binary.LittleEndian
+	}
+	return c.digestByteOrder
+}

@@ -1,6 +1,7 @@
 package session
 
 import (
+	"context"
 	"encoding/binary"
 	"net"
 	"testing"
@@ -159,7 +160,7 @@ func TestAsyncEventCallback(t *testing.T) {
 
 	_, targetConn := newTestSessionWithOptions(t,
 		WithKeepaliveInterval(10*time.Second),
-		WithAsyncHandler(func(evt AsyncEvent) {
+		WithAsyncHandler(func(_ context.Context, evt AsyncEvent) {
 			evtCh <- evt
 		}),
 	)

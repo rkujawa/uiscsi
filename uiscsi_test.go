@@ -2,6 +2,7 @@ package uiscsi_test
 
 import (
 	"context"
+	"encoding/binary"
 	"errors"
 	"io"
 	"testing"
@@ -79,14 +80,15 @@ func TestOptions_Compile(t *testing.T) {
 	opts = append(opts, uiscsi.WithLogger(nil))
 	opts = append(opts, uiscsi.WithKeepaliveInterval(30*time.Second))
 	opts = append(opts, uiscsi.WithKeepaliveTimeout(5*time.Second))
-	opts = append(opts, uiscsi.WithAsyncHandler(func(uiscsi.AsyncEvent) {}))
-	opts = append(opts, uiscsi.WithPDUHook(func(uiscsi.PDUDirection, []byte) {}))
+	opts = append(opts, uiscsi.WithAsyncHandler(func(context.Context, uiscsi.AsyncEvent) {}))
+	opts = append(opts, uiscsi.WithPDUHook(func(context.Context, uiscsi.PDUDirection, []byte) {}))
 	opts = append(opts, uiscsi.WithMetricsHook(func(uiscsi.MetricEvent) {}))
 	opts = append(opts, uiscsi.WithMaxReconnectAttempts(5))
 	opts = append(opts, uiscsi.WithReconnectBackoff(2*time.Second))
+	opts = append(opts, uiscsi.WithDigestByteOrder(binary.LittleEndian))
 
-	if len(opts) != 14 {
-		t.Errorf("expected 14 options, got %d", len(opts))
+	if len(opts) != 15 {
+		t.Errorf("expected 15 options, got %d", len(opts))
 	}
 }
 

@@ -88,6 +88,11 @@ func NewSession(conn *transport.Conn, params login.NegotiatedParams, opts ...Ses
 		tsih:       params.TSIH,
 	}
 
+	// Apply digest byte order if configured.
+	if cfg.digestByteOrder != nil {
+		conn.SetDigestByteOrder(cfg.digestByteOrder)
+	}
+
 	s.cfg.logger.Info("session: opened",
 		"isid", fmt.Sprintf("%x", params.ISID),
 		"tsih", params.TSIH,
@@ -361,7 +366,7 @@ func (s *Session) pduHookBridge() func(uint8, *transport.RawPDU) {
 			if dir == transport.HookReceive {
 				d = PDUReceive
 			}
-			s.cfg.pduHook(d, raw)
+			s.cfg.pduHook(context.Background(), d, raw)
 		}
 		if s.cfg.metricsHook != nil {
 			opcode := pdu.OpCode(raw.BHS[0] & 0x3f)

@@ -7,7 +7,9 @@ package test
 
 import (
 	"encoding/binary"
+	"fmt"
 	"log"
+	"log/slog"
 	"net"
 	"sync"
 	"sync/atomic"
@@ -71,6 +73,16 @@ type MockTarget struct {
 	done     chan struct{}
 	wg       sync.WaitGroup
 	closed   atomic.Bool
+	strict   bool // if true, unhandled opcodes close the connection
+}
+
+// SetStrictMode configures whether unhandled opcodes cause connection errors.
+// In strict mode, receiving an unhandled opcode logs an error and closes the
+// connection, which surfaces test setup bugs immediately.
+func (mt *MockTarget) SetStrictMode(strict bool) {
+	mt.mu.Lock()
+	defer mt.mu.Unlock()
+	mt.strict = strict
 }
 
 // NewMockTarget starts a mock target listening on 127.0.0.1:0.
@@ -177,7 +189,16 @@ func (mt *MockTarget) serveConn(tc *TargetConn) {
 		mt.mu.Unlock()
 
 		if !ok {
-			continue // silently ignore unhandled opcodes
+			slog.Warn("mock target: unhandled opcode",
+				"opcode", fmt.Sprintf("0x%02X", opcode),
+				"remote", tc.nc.RemoteAddr())
+			mt.mu.Lock()
+			strict := mt.strict
+			mt.mu.Unlock()
+			if strict {
+				return // close connection on unhandled opcode in strict mode
+			}
+			continue
 		}
 
 		if err := handler(tc, raw, decoded); err != nil {

@@ -1,6 +1,7 @@
 package session
 
 import (
+	"context"
 	"time"
 
 	"github.com/rkujawa/uiscsi/internal/pdu"
@@ -70,7 +71,7 @@ type MetricEvent struct {
 // read, before dispatch) and WritePump (before write). The hook MUST NOT
 // modify the RawPDU. The hook MAY be called concurrently from multiple
 // goroutines.
-func WithPDUHook(h func(PDUDirection, *transport.RawPDU)) SessionOption {
+func WithPDUHook(h func(context.Context, PDUDirection, *transport.RawPDU)) SessionOption {
 	return func(c *sessionConfig) {
 		c.pduHook = h
 	}

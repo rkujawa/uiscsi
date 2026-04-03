@@ -27,7 +27,11 @@ type RawPDU struct {
 //
 // The returned RawPDU's DataSegment is a freshly allocated slice (caller-owned).
 // Pool scratch buffers are used internally and returned after copying.
-func ReadRawPDU(r io.Reader, digestHeader, digestData bool, maxRecvDSL uint32) (*RawPDU, error) {
+func ReadRawPDU(r io.Reader, digestHeader, digestData bool, maxRecvDSL uint32, digestByteOrder ...binary.ByteOrder) (*RawPDU, error) {
+	byteOrder := binary.ByteOrder(binary.LittleEndian)
+	if len(digestByteOrder) > 0 && digestByteOrder[0] != nil {
+		byteOrder = digestByteOrder[0]
+	}
 	// Stage 1: Read exactly 48 bytes BHS.
 	bhsBuf := GetBHS()
 	defer PutBHS(bhsBuf)
@@ -80,9 +84,9 @@ func ReadRawPDU(r io.Reader, digestHeader, digestData bool, maxRecvDSL uint32) (
 		off += ahsLen
 	}
 
-	// Header digest — stored as native u32 (little-endian on x86).
+	// Header digest — byte order configurable (default LittleEndian).
 	if digestHeader {
-		raw.HeaderDigest = binary.LittleEndian.Uint32(payload[off : off+4])
+		raw.HeaderDigest = byteOrder.Uint32(payload[off : off+4])
 		raw.HasHDigest = true
 		off += 4
 	}
@@ -98,7 +102,7 @@ func ReadRawPDU(r io.Reader, digestHeader, digestData bool, maxRecvDSL uint32) (
 
 		// Data digest — same byte order as header digest.
 		if digestData {
-			raw.DataDigest = binary.LittleEndian.Uint32(payload[off : off+4])
+			raw.DataDigest = byteOrder.Uint32(payload[off : off+4])
 			raw.HasDDigest = true
 		}
 	}
@@ -141,7 +145,11 @@ func ReadRawPDU(r io.Reader, digestHeader, digestData bool, maxRecvDSL uint32) (
 
 // WriteRawPDU writes a complete iSCSI PDU to w as a single contiguous write.
 // This prevents TCP byte interleaving when used with the write pump (Pitfall 7).
-func WriteRawPDU(w io.Writer, p *RawPDU) error {
+func WriteRawPDU(w io.Writer, p *RawPDU, digestByteOrder ...binary.ByteOrder) error {
+	byteOrder := binary.ByteOrder(binary.LittleEndian)
+	if len(digestByteOrder) > 0 && digestByteOrder[0] != nil {
+		byteOrder = digestByteOrder[0]
+	}
 	dsLen := uint32(len(p.DataSegment))
 	padLen := pdu.PadLen(dsLen)
 
@@ -170,11 +178,9 @@ func WriteRawPDU(w io.Writer, p *RawPDU) error {
 		off += len(p.AHS)
 	}
 
-	// Header digest — stored as native u32 on the wire (little-endian on
-	// x86) per Linux iSCSI target implementation. RFC 7143 Section 12.1
-	// is ambiguous but all major implementations use host byte order.
+	// Header digest — byte order configurable (default LittleEndian).
 	if p.HasHDigest {
-		binary.LittleEndian.PutUint32(buf[off:off+4], p.HeaderDigest)
+		byteOrder.PutUint32(buf[off:off+4], p.HeaderDigest)
 		off += 4
 	}
 
@@ -191,7 +197,7 @@ func WriteRawPDU(w io.Writer, p *RawPDU) error {
 
 		// Data digest — same byte order as header digest.
 		if p.HasDDigest {
-			binary.LittleEndian.PutUint32(buf[off:off+4], p.DataDigest)
+			byteOrder.PutUint32(buf[off:off+4], p.DataDigest)
 			off += 4
 		}
 	}
