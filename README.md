@@ -2,6 +2,8 @@
 
 A pure-userspace iSCSI initiator library for Go.
 
+**Status:** v1.0 -- all core iSCSI operations implemented and tested against real LIO kernel targets.
+
 ## Overview
 
 uiscsi implements the iSCSI protocol (RFC 7143) entirely in userspace. There are no kernel modules, no open-iscsi dependency, and no external tools. Go applications import the library and communicate directly with iSCSI targets over TCP.
@@ -20,6 +22,8 @@ The library provides both a high-level typed API (ReadBlocks, WriteBlocks, Inqui
 - **Task management** -- ABORT TASK, LUN RESET, TARGET WARM/COLD RESET
 - **Observability** -- slog structured logging, PDU hooks, metrics callbacks
 - **Digests** -- CRC32C header and data digest negotiation and verification
+- **Discovery** -- SendTargets enumeration, multi-portal support
+- **CLI tool** -- `uiscsi-ls` for lsscsi-style target discovery from the command line
 
 ## Quick Start
 
@@ -77,6 +81,18 @@ Complete example programs are in the `examples/` directory:
 - **[examples/raw-cdb/](examples/raw-cdb/)** -- Send custom SCSI commands via raw CDB pass-through
 - **[examples/error-handling/](examples/error-handling/)** -- Typed error handling and recovery patterns
 
+## CLI Tool
+
+`uiscsi-ls` is a standalone discovery utility built on the library:
+
+```
+go install github.com/rkujawa/uiscsi/uiscsi-ls@latest
+
+uiscsi-ls 192.168.1.100
+```
+
+Output resembles `lsscsi` -- columnar format with target IQN, LUN type, vendor, capacity. Supports `--json` for machine-readable output, `--chap-user`/`--chap-password` for authenticated discovery, and `--initiator-name` for custom initiator IQN.
+
 ## API Reference
 
 Full documentation is available on [pkg.go.dev](https://pkg.go.dev/github.com/rkujawa/uiscsi).
@@ -99,7 +115,16 @@ Key types and functions:
 | `TransportError` | iSCSI transport/connection failure |
 | `AuthError` | Authentication failure |
 
+## Testing
+
+The library includes three test tiers:
+
+- **Unit tests** -- table-driven tests for PDU codec, serial arithmetic, sense parsing (`go test ./...`)
+- **Conformance tests** -- 22 tests against an in-process mock iSCSI target (`test/conformance/`)
+- **E2E tests** -- 19 tests against a real Linux LIO kernel target via configfs (`sudo go test -tags e2e ./test/e2e/`)
+
 ## Requirements
 
 - Go 1.25 or later
-- No external dependencies (stdlib only)
+- No external runtime dependencies (stdlib only)
+- E2E tests require Linux with `target_core_mod` and `iscsi_target_mod` kernel modules
