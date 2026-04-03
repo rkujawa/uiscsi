@@ -139,6 +139,26 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **DOC-04**: Example: raw CDB pass-through for custom SCSI commands
 - [x] **DOC-05**: Example: error handling and recovery
 
+### Audit Remediation
+
+- [x] **AUDIT-01**: MaxRecvDataSegmentLength enforcement in ReadRawPDU (memory exhaustion DoS prevention)
+- [x] **AUDIT-02**: CHAP state initialization returns error instead of panicking on entropy failure
+- [x] **AUDIT-03**: Non-auth login errors wrapped as TransportError, not AuthError
+- [x] **AUDIT-04**: Configurable digest byte order (LittleEndian default, BigEndian for enterprise SAN interop)
+- [x] **AUDIT-05**: Goroutine-safe writeCh access via getter during reconnect (eliminates stale-channel leak)
+- [x] **AUDIT-06**: SNACK sends use blocking send with context timeout instead of silent drop
+- [x] **AUDIT-07**: ERL 2 connection replacement keeps old ITT registered until TMF TASK REASSIGN confirmed
+- [x] **AUDIT-08**: Residual overflow detection in submitAndCheck
+- [x] **AUDIT-09**: Unparseable sense data reported in SCSIError.Message
+- [x] **AUDIT-10**: CDB length validation in Execute() (rejects >16 bytes and empty CDBs)
+- [x] **AUDIT-11**: Reconnect backoff arithmetic safe from negative shift values
+- [x] **AUDIT-12**: SCSIError documented as non-wrapping leaf error (intentional design)
+- [x] **AUDIT-13**: AuthError.Error() includes StatusClass and StatusDetail
+- [x] **AUDIT-14**: WithAsyncHandler and WithPDUHook callbacks receive context.Context
+- [x] **AUDIT-15**: MockTarget logs unhandled opcodes via slog with optional strict mode
+- [x] **AUDIT-16**: encodeDataSegmentLength panics on 24-bit overflow (programmer-error contract)
+- [x] **AUDIT-17**: AHS type validation and max data length enforcement in UnmarshalAHS
+
 ## v2 Requirements
 
 Deferred to future release. Tracked but not in current roadmap.
@@ -268,9 +288,27 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DOC-04 | Phase 7 | Complete |
 | DOC-05 | Phase 7 | Complete |
 
+| AUDIT-01 | Phase 11 | Complete |
+| AUDIT-02 | Phase 11 | Complete |
+| AUDIT-03 | Phase 11 | Complete |
+| AUDIT-04 | Phase 11 | Complete |
+| AUDIT-05 | Phase 11 | Complete |
+| AUDIT-06 | Phase 11 | Complete |
+| AUDIT-07 | Phase 11 | Complete |
+| AUDIT-08 | Phase 11 | Complete |
+| AUDIT-09 | Phase 11 | Complete |
+| AUDIT-10 | Phase 11 | Complete |
+| AUDIT-11 | Phase 11 | Complete |
+| AUDIT-12 | Phase 11 | Complete |
+| AUDIT-13 | Phase 11 | Complete |
+| AUDIT-14 | Phase 11 | Complete |
+| AUDIT-15 | Phase 11 | Complete |
+| AUDIT-16 | Phase 11 | Complete |
+| AUDIT-17 | Phase 11 | Complete |
+
 **Coverage:**
-- v1 requirements: 81 total
-- Mapped to phases: 81
+- v1 requirements: 98 total (81 original + 17 audit)
+- Mapped to phases: 98
 - Unmapped: 0
 
 | Phase | Count | Categories |
@@ -282,7 +320,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | Phase 5 | 19 | SCSI (19) |
 | Phase 6 | 10 | ERL (3), TMF (6), TEST (1) |
 | Phase 7 | 15 | API (5), OBS (3), TEST (2), DOC (5) |
+| Phase 11 | 17 | AUDIT (17) |
 
 ---
 *Requirements defined: 2026-03-31*
-*Last updated: 2026-03-31 after roadmap creation*
+*Last updated: 2026-04-03 after Phase 11 audit remediation*
