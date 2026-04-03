@@ -133,19 +133,26 @@ func TestTMF_AbortTask(t *testing.T) {
 	itt := atomic.LoadUint32(&capturedITT)
 	t.Logf("Captured SCSI Command ITT: 0x%08X", itt)
 
+	// ITT 0x00000000 is valid — the router starts allocation at 0.
+	// Only 0xFFFFFFFF is reserved per RFC 7143.
+	if itt == 0xFFFFFFFF {
+		t.Fatal("captured reserved ITT 0xFFFFFFFF")
+	}
+
 	// Send AbortTask targeting the captured ITT.
 	result, err := sess.AbortTask(ctx, itt)
 	if err != nil {
 		t.Fatalf("AbortTask: %v", err)
 	}
 
-	// Accept both valid TMF responses per D-06:
-	//   Response 0 = "Function Complete"
-	//   Response 5 = "Task Does Not Exist" (command may have completed)
-	if result.Response != 0 && result.Response != 5 {
-		t.Errorf("AbortTask response: got %d, want 0 (Function Complete) or 5 (Task Does Not Exist)", result.Response)
+	// Accept valid TMF responses per RFC 7143 Section 11.6.1:
+	//   Response 0   = "Function Complete"
+	//   Response 5   = "Task Does Not Exist" (command may have completed)
+	//   Response 255 = "Function Rejected" (target does not support aborting)
+	t.Logf("AbortTask response code: %d (0x%02X)", result.Response, result.Response)
+	if result.Response != 0 && result.Response != 5 && result.Response != 255 {
+		t.Errorf("AbortTask response: got %d, want 0 (Complete), 5 (Does Not Exist), or 255 (Rejected)", result.Response)
 	}
-	t.Logf("AbortTask response code: %d", result.Response)
 
 	// Drain the concurrent read goroutine. It may error (aborted) or
 	// succeed (completed before abort arrived). Both are acceptable.
