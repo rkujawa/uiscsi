@@ -173,7 +173,11 @@ func Login(ctx context.Context, tc *transport.Conn, opts ...LoginOption) (*Negot
 
 	// Initialize CHAP state if credentials provided.
 	if cfg.chapUser != "" {
-		ls.chap = newCHAPState(cfg.chapUser, cfg.chapSecret, cfg.mutualCHAP, cfg.targetSecret)
+		chap, err := newCHAPState(cfg.chapUser, cfg.chapSecret, cfg.mutualCHAP, cfg.targetSecret)
+		if err != nil {
+			return nil, err
+		}
+		ls.chap = chap
 	}
 
 	if err := ls.run(ctx); err != nil {
@@ -488,7 +492,7 @@ func (ls *loginState) sendLogin(ctx context.Context, keys []KeyValue, transit bo
 	}
 
 	// Read response -- no digests during login (Pitfall 6).
-	respRaw, err := transport.ReadRawPDU(ls.conn, false, false)
+	respRaw, err := transport.ReadRawPDU(ls.conn, false, false, 0)
 	if err != nil {
 		return nil, fmt.Errorf("login: read PDU: %w", err)
 	}

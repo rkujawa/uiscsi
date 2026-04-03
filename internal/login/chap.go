@@ -59,7 +59,7 @@ type chapState struct {
 // newCHAPState creates a new CHAP state. If mutual is true, it generates
 // a random initiator ID (single byte) and a random 16-byte challenge
 // for the target to respond to.
-func newCHAPState(user, secret string, mutual bool, mutualSecret string) *chapState {
+func newCHAPState(user, secret string, mutual bool, mutualSecret string) (*chapState, error) {
 	cs := &chapState{
 		user:         user,
 		secret:       secret,
@@ -70,17 +70,17 @@ func newCHAPState(user, secret string, mutual bool, mutualSecret string) *chapSt
 		// Generate random initiator ID (1 byte).
 		var idBuf [1]byte
 		if _, err := rand.Read(idBuf[:]); err != nil {
-			panic("chap: failed to read random byte for initiator ID: " + err.Error())
+			return nil, fmt.Errorf("chap: failed to read random byte for initiator ID: %w", err)
 		}
 		cs.initiatorID = idBuf[0]
 
 		// Generate random initiator challenge (16 bytes).
 		cs.initiatorChallenge = make([]byte, 16)
 		if _, err := rand.Read(cs.initiatorChallenge); err != nil {
-			panic("chap: failed to read random bytes for initiator challenge: " + err.Error())
+			return nil, fmt.Errorf("chap: failed to read random bytes for initiator challenge: %w", err)
 		}
 	}
-	return cs
+	return cs, nil
 }
 
 // processChallenge handles the target's CHAP challenge (CHAP_A, CHAP_I, CHAP_C)

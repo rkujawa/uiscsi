@@ -143,7 +143,10 @@ func TestCHAPExchangeOneWay(t *testing.T) {
 	user := "testuser"
 	secret := "testsecret"
 
-	cs := newCHAPState(user, secret, false, "")
+	cs, err := newCHAPState(user, secret, false, "")
+	if err != nil {
+		t.Fatalf("newCHAPState: %v", err)
+	}
 
 	// Simulate target sending CHAP_A, CHAP_I, CHAP_C.
 	challengeBytes := []byte{0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0x10}
@@ -184,7 +187,10 @@ func TestCHAPExchangeMutual(t *testing.T) {
 	secret := "testsecret"
 	mutualSecret := "targetsecret"
 
-	cs := newCHAPState(user, secret, true, mutualSecret)
+	cs, err := newCHAPState(user, secret, true, mutualSecret)
+	if err != nil {
+		t.Fatalf("newCHAPState: %v", err)
+	}
 
 	// Simulate target sending CHAP_A, CHAP_I, CHAP_C.
 	challengeBytes := []byte{0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0x10}
@@ -252,7 +258,10 @@ func TestCHAPExchangeMutual(t *testing.T) {
 }
 
 func TestCHAPExchangeUnsupportedAlgorithm(t *testing.T) {
-	cs := newCHAPState("user", "secret", false, "")
+	cs, err := newCHAPState("user", "secret", false, "")
+	if err != nil {
+		t.Fatalf("newCHAPState: %v", err)
+	}
 
 	targetKeys := map[string]string{
 		"CHAP_A": "6",
@@ -260,7 +269,7 @@ func TestCHAPExchangeUnsupportedAlgorithm(t *testing.T) {
 		"CHAP_C": "0x0102030405060708",
 	}
 
-	_, err := cs.processChallenge(targetKeys)
+	_, err = cs.processChallenge(targetKeys)
 	if err == nil {
 		t.Error("processChallenge with unsupported algorithm should return error")
 	}

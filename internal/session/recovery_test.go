@@ -92,7 +92,7 @@ func (rt *recoverableTarget) handleLogin(conn net.Conn) error {
 	var statSN uint32
 
 	// Read security negotiation PDU.
-	raw, err := transport.ReadRawPDU(conn, false, false)
+	raw, err := transport.ReadRawPDU(conn, false, false, 0)
 	if err != nil {
 		return fmt.Errorf("read security PDU: %w", err)
 	}
@@ -132,7 +132,7 @@ func (rt *recoverableTarget) handleLogin(conn net.Conn) error {
 	statSN++
 
 	// Read operational negotiation PDU.
-	raw2, err := transport.ReadRawPDU(conn, false, false)
+	raw2, err := transport.ReadRawPDU(conn, false, false, 0)
 	if err != nil {
 		return fmt.Errorf("read op PDU: %w", err)
 	}
@@ -199,7 +199,7 @@ func (rt *recoverableTarget) handleLogin(conn net.Conn) error {
 func (rt *recoverableTarget) handleCommands(conn net.Conn) {
 	var statSN uint32 = 2 // after login
 	for {
-		raw, err := transport.ReadRawPDU(conn, false, false)
+		raw, err := transport.ReadRawPDU(conn, false, false, 0)
 		if err != nil {
 			return // connection closed or error
 		}

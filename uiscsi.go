@@ -59,7 +59,7 @@ func Dial(ctx context.Context, addr string, opts ...Option) (*Session, error) {
 		if errors.As(err, &le) && le.StatusClass == 2 {
 			return nil, wrapAuthError(err)
 		}
-		return nil, wrapAuthError(err)
+		return nil, &TransportError{Op: "login", Err: err}
 	}
 
 	// Step 3: Build session options including reconnect info for ERL 0.

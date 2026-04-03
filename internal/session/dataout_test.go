@@ -39,7 +39,7 @@ func writeR2TPDU(t *testing.T, conn net.Conn, r2t *pdu.R2T) {
 // readDataOutPDU reads and decodes a Data-Out PDU from the target conn.
 func readDataOutPDU(t *testing.T, conn net.Conn) *pdu.DataOut {
 	t.Helper()
-	raw, err := transport.ReadRawPDU(conn, false, false)
+	raw, err := transport.ReadRawPDU(conn, false, false, 0)
 	if err != nil {
 		t.Fatalf("read DataOut: %v", err)
 	}

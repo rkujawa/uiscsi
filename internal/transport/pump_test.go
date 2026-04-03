@@ -38,7 +38,7 @@ func TestWritePump_BasicWrite(t *testing.T) {
 
 	// Read 3 PDUs from other end
 	for i := 0; i < 3; i++ {
-		got, err := ReadRawPDU(rConn, false, false)
+		got, err := ReadRawPDU(rConn, false, false, 0)
 		if err != nil {
 			t.Fatalf("ReadRawPDU #%d: %v", i, err)
 		}
@@ -75,7 +75,7 @@ func TestReadPump_BasicDispatch(t *testing.T) {
 	// Start read pump
 	errCh := make(chan error, 1)
 	go func() {
-		errCh <- ReadPump(ctx, rConn, router, unsolicitedCh, false, false, slog.Default(), nil)
+		errCh <- ReadPump(ctx, rConn, router, unsolicitedCh, false, false, slog.Default(), nil, 0)
 	}()
 
 	// Write 3 PDUs with matching ITTs
@@ -111,7 +111,7 @@ func TestReadPump_UnsolicitedITT(t *testing.T) {
 	defer cancel()
 
 	go func() {
-		ReadPump(ctx, rConn, router, unsolicitedCh, false, false, slog.Default(), nil)
+		ReadPump(ctx, rConn, router, unsolicitedCh, false, false, slog.Default(), nil, 0)
 	}()
 
 	// Write PDU with reserved ITT 0xFFFFFFFF
@@ -161,7 +161,7 @@ func TestPump_ConcurrentWriters(t *testing.T) {
 	// Read all 10 from the other end
 	seen := make(map[byte]bool)
 	for i := 0; i < writers; i++ {
-		got, err := ReadRawPDU(rConn, false, false)
+		got, err := ReadRawPDU(rConn, false, false, 0)
 		if err != nil {
 			t.Fatalf("ReadRawPDU %d: %v", i, err)
 		}
@@ -193,7 +193,7 @@ func TestPump_Shutdown(t *testing.T) {
 		writeErr <- WritePump(ctx, wConn, writeCh, slog.Default(), nil)
 	}()
 	go func() {
-		readErr <- ReadPump(ctx, rConn, router, unsolicitedCh, false, false, slog.Default(), nil)
+		readErr <- ReadPump(ctx, rConn, router, unsolicitedCh, false, false, slog.Default(), nil, 0)
 	}()
 
 	// Cancel context to trigger shutdown
@@ -232,7 +232,7 @@ func TestPump_FullRoundTrip(t *testing.T) {
 
 	// Start write pump on wConn, read pump on rConn
 	go WritePump(ctx, wConn, writeCh, slog.Default(), nil)
-	go ReadPump(ctx, rConn, router, unsolicitedCh, false, false, slog.Default(), nil)
+	go ReadPump(ctx, rConn, router, unsolicitedCh, false, false, slog.Default(), nil, 0)
 
 	// Register an ITT and send a PDU through the write pump
 	itt, respCh := router.Register()
@@ -277,7 +277,7 @@ func TestReadPumpPDUHook(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	go ReadPump(ctx, rConn, router, unsolicitedCh, false, false, slog.Default(), hook)
+	go ReadPump(ctx, rConn, router, unsolicitedCh, false, false, slog.Default(), hook, 0)
 
 	// Send a PDU with matching ITT.
 	bhs := makeBHS(pdu.OpSCSIResponse, 0, 0)
@@ -333,7 +333,7 @@ func TestWritePumpPDUHook(t *testing.T) {
 	writeCh <- outPDU
 
 	// Read the PDU from the other side to ensure WritePump processed it.
-	_, err := ReadRawPDU(rConn, false, false)
+	_, err := ReadRawPDU(rConn, false, false, 0)
 	if err != nil {
 		t.Fatalf("ReadRawPDU: %v", err)
 	}
@@ -406,7 +406,7 @@ func TestReadPumpLogger(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	go ReadPump(ctx, rConn, router, unsolicitedCh, false, false, logger, nil)
+	go ReadPump(ctx, rConn, router, unsolicitedCh, false, false, logger, nil, 0)
 
 	bhs := makeBHS(pdu.OpSCSIResponse, 0, 0)
 	binary.BigEndian.PutUint32(bhs[16:20], itt)

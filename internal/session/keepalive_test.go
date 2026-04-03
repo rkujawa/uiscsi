@@ -38,7 +38,7 @@ func TestKeepalivePing(t *testing.T) {
 	)
 
 	// Read the NOP-Out ping from the session.
-	raw, err := transport.ReadRawPDU(targetConn, false, false)
+	raw, err := transport.ReadRawPDU(targetConn, false, false, 0)
 	if err != nil {
 		t.Fatalf("read NOP-Out: %v", err)
 	}
@@ -126,7 +126,7 @@ func TestUnsolicitedNOPInResponse(t *testing.T) {
 	writeNOPInPDU(t, targetConn, nopIn)
 
 	// Read the NOP-Out response.
-	raw, err := transport.ReadRawPDU(targetConn, false, false)
+	raw, err := transport.ReadRawPDU(targetConn, false, false, 0)
 	if err != nil {
 		t.Fatalf("read NOP-Out response: %v", err)
 	}

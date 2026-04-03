@@ -157,7 +157,7 @@ func writeTextRespPDU(t *testing.T, conn net.Conn, resp *pdu.TextResp) {
 // readTextReqPDU reads and decodes a TextReq PDU from the conn.
 func readTextReqPDU(t *testing.T, conn net.Conn) *pdu.TextReq {
 	t.Helper()
-	raw, err := transport.ReadRawPDU(conn, false, false)
+	raw, err := transport.ReadRawPDU(conn, false, false, 0)
 	if err != nil {
 		t.Fatalf("read TextReq: %v", err)
 	}
@@ -323,7 +323,7 @@ func TestDiscoverIntegration(t *testing.T) {
 
 		// Phase 1: Handle login PDUs.
 		// Read LoginReq (security negotiation).
-		loginRaw, readErr := transport.ReadRawPDU(conn, false, false)
+		loginRaw, readErr := transport.ReadRawPDU(conn, false, false, 0)
 		if readErr != nil {
 			t.Logf("mock target: read login: %v", readErr)
 			return
@@ -357,7 +357,7 @@ func TestDiscoverIntegration(t *testing.T) {
 		}
 
 		// Read operational negotiation LoginReq.
-		opRaw, readErr := transport.ReadRawPDU(conn, false, false)
+		opRaw, readErr := transport.ReadRawPDU(conn, false, false, 0)
 		if readErr != nil {
 			t.Logf("mock target: read op login: %v", readErr)
 			return
@@ -412,7 +412,7 @@ func TestDiscoverIntegration(t *testing.T) {
 		}
 
 		// Phase 2: Handle SendTargets TextReq.
-		textRaw, readErr := transport.ReadRawPDU(conn, false, false)
+		textRaw, readErr := transport.ReadRawPDU(conn, false, false, 0)
 		if readErr != nil {
 			t.Logf("mock target: read text req: %v", readErr)
 			return
@@ -444,7 +444,7 @@ func TestDiscoverIntegration(t *testing.T) {
 		}
 
 		// Phase 3: Handle Logout.
-		logoutRaw, readErr := transport.ReadRawPDU(conn, false, false)
+		logoutRaw, readErr := transport.ReadRawPDU(conn, false, false, 0)
 		if readErr != nil {
 			t.Logf("mock target: read logout: %v", readErr)
 			return

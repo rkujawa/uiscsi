@@ -23,7 +23,7 @@ func TestLogoutGraceful(t *testing.T) {
 	}()
 
 	// Read the LogoutReq from the target side.
-	raw, err := transport.ReadRawPDU(targetConn, false, false)
+	raw, err := transport.ReadRawPDU(targetConn, false, false, 0)
 	if err != nil {
 		t.Fatalf("read LogoutReq: %v", err)
 	}
@@ -127,7 +127,7 @@ func TestLogoutDrainsInFlight(t *testing.T) {
 	}
 
 	// Now the Logout should proceed with the LogoutReq.
-	raw, err := transport.ReadRawPDU(targetConn, false, false)
+	raw, err := transport.ReadRawPDU(targetConn, false, false, 0)
 	if err != nil {
 		t.Fatalf("read LogoutReq: %v", err)
 	}
@@ -173,7 +173,7 @@ func TestLogoutReasonCode2(t *testing.T) {
 	}()
 
 	// Read the LogoutReq.
-	raw, err := transport.ReadRawPDU(targetConn, false, false)
+	raw, err := transport.ReadRawPDU(targetConn, false, false, 0)
 	if err != nil {
 		t.Fatalf("read LogoutReq: %v", err)
 	}
@@ -225,7 +225,7 @@ func TestCloseWithLogout(t *testing.T) {
 	}()
 
 	// Read the LogoutReq from Close.
-	raw, err := transport.ReadRawPDU(targetConn, false, false)
+	raw, err := transport.ReadRawPDU(targetConn, false, false, 0)
 	if err != nil {
 		t.Fatalf("read LogoutReq: %v", err)
 	}

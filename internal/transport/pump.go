@@ -58,7 +58,7 @@ func WritePump(ctx context.Context, w io.Writer, writeCh <-chan *RawPDU,
 // (connection closed) or ctx is cancelled.
 func ReadPump(ctx context.Context, r io.Reader, router *Router,
 	unsolicitedCh chan<- *RawPDU, digestHeader, digestData bool,
-	logger *slog.Logger, pduHook func(uint8, *RawPDU)) error {
+	logger *slog.Logger, pduHook func(uint8, *RawPDU), maxRecvDSL uint32) error {
 	for {
 		// Check cancellation before each read.
 		select {
@@ -67,7 +67,7 @@ func ReadPump(ctx context.Context, r io.Reader, router *Router,
 		default:
 		}
 
-		raw, err := ReadRawPDU(r, digestHeader, digestData)
+		raw, err := ReadRawPDU(r, digestHeader, digestData, maxRecvDSL)
 		if err != nil {
 			// Check if context was cancelled during the read.
 			select {

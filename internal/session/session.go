@@ -376,7 +376,7 @@ func (s *Session) pduHookBridge() func(uint8, *transport.RawPDU) {
 func (s *Session) readPumpLoop(ctx context.Context, conn *transport.Conn, unsolCh chan *transport.RawPDU) {
 	err := transport.ReadPump(ctx, conn.NetConn(), s.router, unsolCh,
 		conn.DigestHeader(), conn.DigestData(),
-		s.cfg.logger, s.pduHookBridge())
+		s.cfg.logger, s.pduHookBridge(), conn.MaxRecvDSL())
 	if err != nil && ctx.Err() == nil {
 		// DigestError is connection-fatal at ERL 0 (per RFC 7143 Section 7.3
 		// and D-03). Do NOT attempt reconnect -- the connection data is corrupt.

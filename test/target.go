@@ -158,7 +158,7 @@ func (mt *MockTarget) acceptLoop() {
 func (mt *MockTarget) serveConn(tc *TargetConn) {
 	defer mt.wg.Done()
 	for {
-		raw, err := transport.ReadRawPDU(tc.nc, false, false)
+		raw, err := transport.ReadRawPDU(tc.nc, false, false, 0)
 		if err != nil {
 			return // connection closed or error
 		}

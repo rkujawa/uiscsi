@@ -61,7 +61,7 @@ func TestFramerReadRawPDU_Basic(t *testing.T) {
 
 	go writeRawBytes(wConn, bhs, nil, data, false, false)
 
-	raw, err := ReadRawPDU(rConn, false, false)
+	raw, err := ReadRawPDU(rConn, false, false, 0)
 	if err != nil {
 		t.Fatalf("ReadRawPDU: %v", err)
 	}
@@ -91,7 +91,7 @@ func TestFramerReadRawPDU_BackToBack(t *testing.T) {
 		writeRawBytes(wConn, bhs2, nil, data2, false, false)
 	}()
 
-	raw1, err := ReadRawPDU(rConn, false, false)
+	raw1, err := ReadRawPDU(rConn, false, false, 0)
 	if err != nil {
 		t.Fatalf("ReadRawPDU #1: %v", err)
 	}
@@ -99,7 +99,7 @@ func TestFramerReadRawPDU_BackToBack(t *testing.T) {
 		t.Errorf("PDU 1 data: got %x, want %x", raw1.DataSegment, data1)
 	}
 
-	raw2, err := ReadRawPDU(rConn, false, false)
+	raw2, err := ReadRawPDU(rConn, false, false, 0)
 	if err != nil {
 		t.Fatalf("ReadRawPDU #2: %v", err)
 	}
@@ -119,7 +119,7 @@ func TestFramerReadRawPDU_WithAHS(t *testing.T) {
 
 	go writeRawBytes(wConn, bhs, ahs, nil, false, false)
 
-	raw, err := ReadRawPDU(rConn, false, false)
+	raw, err := ReadRawPDU(rConn, false, false, 0)
 	if err != nil {
 		t.Fatalf("ReadRawPDU: %v", err)
 	}
@@ -136,7 +136,7 @@ func TestFramerReadRawPDU_HeaderDigest(t *testing.T) {
 	bhs := makeBHS(pdu.OpNOPOut, 0, 0)
 	go writeRawBytesWithDigests(wConn, bhs, nil, nil, true, false)
 
-	raw, err := ReadRawPDU(rConn, true, false)
+	raw, err := ReadRawPDU(rConn, true, false, 0)
 	if err != nil {
 		t.Fatalf("ReadRawPDU: %v", err)
 	}
@@ -159,7 +159,7 @@ func TestFramerReadRawPDU_DataDigest(t *testing.T) {
 
 	go writeRawBytesWithDigests(wConn, bhs, nil, data, false, true)
 
-	raw, err := ReadRawPDU(rConn, false, true)
+	raw, err := ReadRawPDU(rConn, false, true, 0)
 	if err != nil {
 		t.Fatalf("ReadRawPDU: %v", err)
 	}
@@ -180,7 +180,7 @@ func TestFramerReadRawPDU_ZeroLengthData(t *testing.T) {
 	bhs := makeBHS(pdu.OpNOPOut, 0, 0)
 	go writeRawBytes(wConn, bhs, nil, nil, false, false)
 
-	raw, err := ReadRawPDU(rConn, false, false)
+	raw, err := ReadRawPDU(rConn, false, false, 0)
 	if err != nil {
 		t.Fatalf("ReadRawPDU: %v", err)
 	}
@@ -214,7 +214,7 @@ func TestFramerReadRawPDU_PaddingVariants(t *testing.T) {
 
 			go writeRawBytes(wConn, bhs, nil, data, false, false)
 
-			raw, err := ReadRawPDU(rConn, false, false)
+			raw, err := ReadRawPDU(rConn, false, false, 0)
 			if err != nil {
 				t.Fatalf("ReadRawPDU: %v", err)
 			}
@@ -235,7 +235,7 @@ func TestFramerReadRawPDU_TruncatedBHS(t *testing.T) {
 		wConn.Close()
 	}()
 
-	_, err := ReadRawPDU(rConn, false, false)
+	_, err := ReadRawPDU(rConn, false, false, 0)
 	if err == nil {
 		t.Fatal("expected error on truncated BHS")
 	}
@@ -260,7 +260,7 @@ func TestFramerWriteRawPDU_RoundTrip(t *testing.T) {
 		}
 	}()
 
-	got, err := ReadRawPDU(rConn, false, false)
+	got, err := ReadRawPDU(rConn, false, false, 0)
 	if err != nil {
 		t.Fatalf("ReadRawPDU: %v", err)
 	}
@@ -299,7 +299,7 @@ func TestFramerWriteRawPDU_WithDigests(t *testing.T) {
 		}
 	}()
 
-	got, err := ReadRawPDU(rConn, true, true)
+	got, err := ReadRawPDU(rConn, true, true, 0)
 	if err != nil {
 		t.Fatalf("ReadRawPDU: %v", err)
 	}
@@ -355,7 +355,7 @@ func TestFramerReadRawPDU_HeaderDigestMismatch(t *testing.T) {
 		wConn.Write(hd[:])
 	}()
 
-	_, err := ReadRawPDU(rConn, true, false)
+	_, err := ReadRawPDU(rConn, true, false, 0)
 	if err == nil {
 		t.Fatal("expected error on header digest mismatch")
 	}
@@ -396,7 +396,7 @@ func TestFramerReadRawPDU_DataDigestMismatch(t *testing.T) {
 		wConn.Write(dd[:])
 	}()
 
-	_, err := ReadRawPDU(rConn, false, true)
+	_, err := ReadRawPDU(rConn, false, true, 0)
 	if err == nil {
 		t.Fatal("expected error on data digest mismatch")
 	}
@@ -426,7 +426,7 @@ func TestFramerReadRawPDU_CorrectDigestsNoError(t *testing.T) {
 
 	go writeRawBytesWithDigests(wConn, bhs, nil, data, true, true)
 
-	raw, err := ReadRawPDU(rConn, true, true)
+	raw, err := ReadRawPDU(rConn, true, true, 0)
 	if err != nil {
 		t.Fatalf("ReadRawPDU with correct digests: %v", err)
 	}
@@ -447,7 +447,7 @@ func TestFramerReadRawPDU_DigestDisabledNoVerify(t *testing.T) {
 		wConn.Write(bhs[:])
 	}()
 
-	raw, err := ReadRawPDU(rConn, false, false)
+	raw, err := ReadRawPDU(rConn, false, false, 0)
 	if err != nil {
 		t.Fatalf("ReadRawPDU: %v", err)
 	}
@@ -472,7 +472,7 @@ func TestFramerReadRawPDU_HeaderDigestMismatchWithAHS(t *testing.T) {
 		wConn.Write(hd[:])
 	}()
 
-	_, err := ReadRawPDU(rConn, true, false)
+	_, err := ReadRawPDU(rConn, true, false, 0)
 	if err == nil {
 		t.Fatal("expected error on header digest mismatch with AHS")
 	}

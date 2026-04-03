@@ -2,6 +2,7 @@ package transport
 
 import (
 	"encoding/binary"
+	"fmt"
 	"io"
 
 	"github.com/rkujawa/uiscsi/internal/digest"
@@ -26,7 +27,7 @@ type RawPDU struct {
 //
 // The returned RawPDU's DataSegment is a freshly allocated slice (caller-owned).
 // Pool scratch buffers are used internally and returned after copying.
-func ReadRawPDU(r io.Reader, digestHeader, digestData bool) (*RawPDU, error) {
+func ReadRawPDU(r io.Reader, digestHeader, digestData bool, maxRecvDSL uint32) (*RawPDU, error) {
 	// Stage 1: Read exactly 48 bytes BHS.
 	bhsBuf := GetBHS()
 	defer PutBHS(bhsBuf)
@@ -41,6 +42,11 @@ func ReadRawPDU(r io.Reader, digestHeader, digestData bool) (*RawPDU, error) {
 	// Stage 2: Parse lengths from BHS.
 	ahsLen := uint32(raw.BHS[4]) * 4 // TotalAHSLength is in 4-byte words
 	dsLen := uint32(raw.BHS[5])<<16 | uint32(raw.BHS[6])<<8 | uint32(raw.BHS[7])
+
+	// Enforce MaxRecvDataSegmentLength to prevent memory exhaustion.
+	if maxRecvDSL > 0 && dsLen > maxRecvDSL {
+		return nil, fmt.Errorf("transport: data segment length %d exceeds MaxRecvDataSegmentLength %d", dsLen, maxRecvDSL)
+	}
 
 	// Stage 3: Compute total remaining bytes after BHS.
 	remaining := ahsLen

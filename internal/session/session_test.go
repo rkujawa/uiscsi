@@ -139,7 +139,7 @@ func buildRawPDU(t *testing.T, p pdu.PDU) *transport.RawPDU {
 // consumed. Returns when the conn is closed or after responding to Logout.
 func respondToLogout(conn net.Conn) {
 	for {
-		raw, err := transport.ReadRawPDU(conn, false, false)
+		raw, err := transport.ReadRawPDU(conn, false, false, 0)
 		if err != nil {
 			return
 		}
@@ -168,7 +168,7 @@ func respondToLogout(conn net.Conn) {
 // readSCSICommandPDU reads and decodes a SCSICommand PDU from the target conn.
 func readSCSICommandPDU(t *testing.T, conn net.Conn) *pdu.SCSICommand {
 	t.Helper()
-	raw, err := transport.ReadRawPDU(conn, false, false)
+	raw, err := transport.ReadRawPDU(conn, false, false, 0)
 	if err != nil {
 		t.Fatalf("read SCSICommand: %v", err)
 	}
@@ -343,7 +343,7 @@ func TestSessionConcurrentSubmit(t *testing.T) {
 	// Each response advances the CmdSN window, allowing the next submit to proceed.
 	var allResults []cmdResult
 	for i := range n {
-		raw, err := transport.ReadRawPDU(targetConn, false, false)
+		raw, err := transport.ReadRawPDU(targetConn, false, false, 0)
 		if err != nil {
 			t.Fatalf("read command %d: %v", i, err)
 		}

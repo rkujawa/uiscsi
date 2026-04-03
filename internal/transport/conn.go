@@ -71,3 +71,7 @@ func (c *Conn) SetDigests(header, data bool) {
 func (c *Conn) SetMaxRecvDSL(maxDSL uint32) {
 	c.maxRecvDSL = maxDSL
 }
+
+// MaxRecvDSL returns the negotiated MaxRecvDataSegmentLength.
+// Zero means not yet negotiated (no limit enforced).
+func (c *Conn) MaxRecvDSL() uint32 { return c.maxRecvDSL }

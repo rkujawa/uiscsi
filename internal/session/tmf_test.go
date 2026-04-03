@@ -14,7 +14,7 @@ import (
 // readTaskMgmtReqPDU reads and decodes a TaskMgmtReq PDU from the target conn.
 func readTaskMgmtReqPDU(t *testing.T, conn net.Conn) *pdu.TaskMgmtReq {
 	t.Helper()
-	raw, err := transport.ReadRawPDU(conn, false, false)
+	raw, err := transport.ReadRawPDU(conn, false, false, 0)
 	if err != nil {
 		t.Fatalf("read TaskMgmtReq: %v", err)
 	}
@@ -44,7 +44,7 @@ func writeTaskMgmtRespPDU(t *testing.T, conn net.Conn, resp *pdu.TaskMgmtResp) {
 func drainUntilTMF(t *testing.T, conn net.Conn) *pdu.TaskMgmtReq {
 	t.Helper()
 	for {
-		raw, err := transport.ReadRawPDU(conn, false, false)
+		raw, err := transport.ReadRawPDU(conn, false, false, 0)
 		if err != nil {
 			t.Fatalf("read PDU while draining: %v", err)
 		}

@@ -93,7 +93,7 @@ func runMockTarget(t *testing.T, ln net.Listener, cfg mockTargetConfig) {
 
 	for {
 		// Read incoming login request.
-		raw, err := transport.ReadRawPDU(conn, false, false)
+		raw, err := transport.ReadRawPDU(conn, false, false, 0)
 		if err != nil {
 			t.Logf("mock target: read error: %v", err)
 			return
@@ -132,7 +132,7 @@ func runMockTarget(t *testing.T, ln net.Listener, cfg mockTargetConfig) {
 				statSN++
 
 				// Round 2: Read CHAP_A, send challenge.
-				rawAlgo, err := transport.ReadRawPDU(conn, false, false)
+				rawAlgo, err := transport.ReadRawPDU(conn, false, false, 0)
 				if err != nil {
 					t.Logf("mock target: read CHAP_A: %v", err)
 					return
@@ -160,7 +160,7 @@ func runMockTarget(t *testing.T, ln net.Listener, cfg mockTargetConfig) {
 				statSN++
 
 				// Round 3: Read CHAP response from initiator.
-				raw2, err := transport.ReadRawPDU(conn, false, false)
+				raw2, err := transport.ReadRawPDU(conn, false, false, 0)
 				if err != nil {
 					t.Logf("mock target: read CHAP response: %v", err)
 					return

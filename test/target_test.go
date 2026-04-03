@@ -80,7 +80,7 @@ func TestMockTarget_LoginExchange(t *testing.T) {
 	}
 
 	// Read response.
-	respRaw, err := transport.ReadRawPDU(conn, false, false)
+	respRaw, err := transport.ReadRawPDU(conn, false, false, 0)
 	if err != nil {
 		t.Fatalf("ReadRawPDU: %v", err)
 	}
@@ -148,7 +148,7 @@ func TestMockTarget_HandleSCSIRead(t *testing.T) {
 	}
 
 	// Read DataIn response.
-	respRaw, err := transport.ReadRawPDU(conn, false, false)
+	respRaw, err := transport.ReadRawPDU(conn, false, false, 0)
 	if err != nil {
 		t.Fatalf("ReadRawPDU: %v", err)
 	}
@@ -227,7 +227,7 @@ func sendLoginSecurityPhase(t *testing.T, conn net.Conn) {
 		t.Fatalf("WriteRawPDU: %v", err)
 	}
 
-	respRaw, err := transport.ReadRawPDU(conn, false, false)
+	respRaw, err := transport.ReadRawPDU(conn, false, false, 0)
 	if err != nil {
 		t.Fatalf("ReadRawPDU: %v", err)
 	}
@@ -285,7 +285,7 @@ func sendLoginOperationalPhase(t *testing.T, conn net.Conn) {
 		t.Fatalf("WriteRawPDU: %v", err)
 	}
 
-	respRaw, err := transport.ReadRawPDU(conn, false, false)
+	respRaw, err := transport.ReadRawPDU(conn, false, false, 0)
 	if err != nil {
 		t.Fatalf("ReadRawPDU: %v", err)
 	}
