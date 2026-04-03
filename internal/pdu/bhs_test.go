@@ -86,3 +86,23 @@ func TestEncodeOpcodeByteMasks(t *testing.T) {
 		t.Errorf("opcode bits wrong: got 0x%02x, want 0x%02x", b&0x3f, byte(OpReject))
 	}
 }
+
+func TestEncodeDataSegmentLength_PanicsOnOverflow(t *testing.T) {
+	defer func() {
+		r := recover()
+		if r == nil {
+			t.Fatal("expected panic for dsLen > 0xFFFFFF")
+		}
+	}()
+	bhs := make([]byte, BHSLength)
+	encodeDataSegmentLength(bhs, 0x1000000) // 24-bit max + 1
+}
+
+func TestEncodeDataSegmentLength_MaxValid(t *testing.T) {
+	bhs := make([]byte, BHSLength)
+	encodeDataSegmentLength(bhs, 0xFFFFFF)
+	got := decodeDataSegmentLength(bhs)
+	if got != 0xFFFFFF {
+		t.Fatalf("expected 0xFFFFFF, got 0x%X", got)
+	}
+}

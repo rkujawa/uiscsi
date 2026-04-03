@@ -94,6 +94,31 @@ func TestUnmarshalAHSEmpty(t *testing.T) {
 	}
 }
 
+func TestUnmarshalAHS_UnknownType(t *testing.T) {
+	// Build AHS with unknown type 99 — should succeed (forward compatibility).
+	segments := []AHS{{Type: 99, Data: []byte{0x01, 0x02}}}
+	encoded := MarshalAHS(segments)
+	decoded, err := UnmarshalAHS(encoded)
+	if err != nil {
+		t.Fatalf("unexpected error for unknown AHS type: %v", err)
+	}
+	if len(decoded) != 1 || decoded[0].Type != 99 {
+		t.Fatal("expected one segment with type 99")
+	}
+}
+
+func TestUnmarshalAHS_ExcessiveLength(t *testing.T) {
+	// Craft AHS header claiming dataLen > 16384.
+	data := make([]byte, 8)
+	data[0] = 0x40 // ahsLen high byte: 0x4002 = 16386
+	data[1] = 0x04 // ahsLen low byte: ahsLen=16388 -> dataLen=16386
+	data[2] = byte(AHSExtendedCDB)
+	_, err := UnmarshalAHS(data)
+	if err == nil {
+		t.Fatal("expected error for excessive AHS length")
+	}
+}
+
 func TestUnmarshalAHSTruncated(t *testing.T) {
 	// Only 2 bytes -- not enough for a valid AHS header (4 bytes minimum)
 	_, err := UnmarshalAHS([]byte{0x00, 0x01})

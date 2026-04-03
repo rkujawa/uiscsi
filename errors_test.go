@@ -3,6 +3,7 @@ package uiscsi
 import (
 	"errors"
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/rkujawa/uiscsi/internal/login"
@@ -190,5 +191,20 @@ func TestWrapAuthError_NonLoginError(t *testing.T) {
 	}
 	if te.Op != "login" {
 		t.Errorf("TransportError.Op = %q, want %q", te.Op, "login")
+	}
+}
+
+func TestAuthError_ErrorIncludesStatusCodes(t *testing.T) {
+	ae := &AuthError{
+		Message:      "authentication failed",
+		StatusClass:  2,
+		StatusDetail: 1,
+	}
+	got := ae.Error()
+	if !strings.Contains(got, "class=2") {
+		t.Fatalf("AuthError.Error() missing StatusClass: %s", got)
+	}
+	if !strings.Contains(got, "detail=1") {
+		t.Fatalf("AuthError.Error() missing StatusDetail: %s", got)
 	}
 }
