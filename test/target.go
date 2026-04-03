@@ -561,17 +561,23 @@ func (mt *MockTarget) HandleSCSIError(status uint8, senseData []byte) {
 		cmd := decoded.(*pdu.SCSICommand)
 		statSN := tc.NextStatSN()
 
+		// Per RFC 7143 Section 11.4.7.2, the SCSI Response data segment
+		// is [SenseLength (2 bytes, big-endian)] [Sense Data].
+		dataSegment := make([]byte, 2+len(senseData))
+		binary.BigEndian.PutUint16(dataSegment[0:2], uint16(len(senseData)))
+		copy(dataSegment[2:], senseData)
+
 		resp := &pdu.SCSIResponse{
 			Header: pdu.Header{
 				Final:            true,
 				InitiatorTaskTag: cmd.InitiatorTaskTag,
-				DataSegmentLen:   uint32(len(senseData)),
+				DataSegmentLen:   uint32(len(dataSegment)),
 			},
 			Status:   status,
 			StatSN:   statSN,
 			ExpCmdSN: cmd.CmdSN + 1,
 			MaxCmdSN: cmd.CmdSN + 10,
-			Data:     senseData,
+			Data:     dataSegment,
 		}
 		return tc.SendPDU(resp)
 	})
