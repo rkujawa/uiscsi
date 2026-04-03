@@ -566,3 +566,80 @@ func TestSessionLifecycleLogging(t *testing.T) {
 		t.Error("expected Info log with 'session: closing' after Close")
 	}
 }
+
+func TestSCSIResponseSenseDataExtraction(t *testing.T) {
+	// Build fixed-format sense data: response code 0x70, SenseKey 0x05
+	// (ILLEGAL REQUEST), ASC 0x21 (LBA out of range), ASCQ 0x00.
+	senseBytes := make([]byte, 18)
+	senseBytes[0] = 0x70  // response code: current errors, fixed format
+	senseBytes[2] = 0x05  // sense key: ILLEGAL REQUEST
+	senseBytes[7] = 10    // additional sense length (18 - 8 = 10)
+	senseBytes[12] = 0x21 // ASC: LBA out of range
+	senseBytes[13] = 0x00 // ASCQ
+
+	// Build the SCSI Response data segment per RFC 7143 Section 11.4.7.2:
+	// [SenseLength (2 bytes, big-endian)] [Sense Data (SenseLength bytes)]
+	dataSegment := make([]byte, 2+len(senseBytes))
+	binary.BigEndian.PutUint16(dataSegment[0:2], uint16(len(senseBytes)))
+	copy(dataSegment[2:], senseBytes)
+
+	resp := &pdu.SCSIResponse{
+		Status: 0x02, // CHECK CONDITION
+		Data:   dataSegment,
+	}
+
+	tk := newTask(1, false, false)
+	tk.handleSCSIResponse(resp)
+
+	result := <-tk.resultCh
+	if result.Err != nil {
+		t.Fatalf("unexpected error: %v", result.Err)
+	}
+	if result.Status != 0x02 {
+		t.Fatalf("expected status 0x02, got 0x%02X", result.Status)
+	}
+	if len(result.SenseData) != 18 {
+		t.Fatalf("expected 18 sense bytes, got %d", len(result.SenseData))
+	}
+	// Verify the SenseLength prefix was stripped: first byte should be
+	// the response code (0x70), not the length MSB (0x00).
+	if result.SenseData[0] != 0x70 {
+		t.Errorf("expected response code 0x70 at SenseData[0], got 0x%02X", result.SenseData[0])
+	}
+	if result.SenseData[2] != 0x05 {
+		t.Errorf("expected sense key 0x05 at SenseData[2], got 0x%02X", result.SenseData[2])
+	}
+	if result.SenseData[12] != 0x21 {
+		t.Errorf("expected ASC 0x21 at SenseData[12], got 0x%02X", result.SenseData[12])
+	}
+}
+
+func TestSCSIResponseSenseDataEmpty(t *testing.T) {
+	// When data segment is nil or too short, SenseData should be nil.
+	tests := []struct {
+		name string
+		data []byte
+		wantLen int
+	}{
+		{"nil data", nil, 0},
+		{"empty data", []byte{}, 0},
+		{"one byte", []byte{0x00}, 0},
+		{"zero length", []byte{0x00, 0x00}, 0},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			resp := &pdu.SCSIResponse{
+				Status: 0x00,
+				Data:   tt.data,
+			}
+			tk := newTask(1, false, false)
+			tk.handleSCSIResponse(resp)
+
+			result := <-tk.resultCh
+			if len(result.SenseData) != tt.wantLen {
+				t.Errorf("expected SenseData len %d, got %d", tt.wantLen, len(result.SenseData))
+			}
+		})
+	}
+}

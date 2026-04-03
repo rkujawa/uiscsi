@@ -2,6 +2,7 @@ package session
 
 import (
 	"bytes"
+	"encoding/binary"
 	"fmt"
 	"io"
 	"time"
@@ -123,9 +124,20 @@ func (t *task) handleDataIn(din *pdu.DataIn) {
 // handleSCSIResponse processes a SCSIResponse PDU for this task.
 // It delivers the final Result with buffered data (for reads) or nil data.
 func (t *task) handleSCSIResponse(resp *pdu.SCSIResponse) {
+	// Extract sense data from SCSI Response data segment.
+	// Per RFC 7143 Section 11.4.7.2, the data segment starts with
+	// a 2-byte SenseLength field followed by the actual sense data.
+	var senseData []byte
+	if len(resp.Data) >= 2 {
+		senseLen := binary.BigEndian.Uint16(resp.Data[0:2])
+		if int(senseLen) <= len(resp.Data)-2 {
+			senseData = resp.Data[2 : 2+int(senseLen)]
+		}
+	}
+
 	r := Result{
 		Status:        resp.Status,
-		SenseData:     resp.Data,
+		SenseData:     senseData,
 		Overflow:      resp.Overflow,
 		Underflow:     resp.Underflow,
 		ResidualCount: resp.ResidualCount,
