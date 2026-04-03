@@ -41,7 +41,7 @@ func TestAuthError_Error_External(t *testing.T) {
 		StatusDetail: 1,
 		Message:      "authentication failure",
 	}
-	if e.Error() != "iscsi auth: authentication failure" {
+	if e.Error() != "iscsi auth: authentication failure (class=2 detail=1)" {
 		t.Errorf("AuthError.Error() = %q, want expected format", e.Error())
 	}
 }

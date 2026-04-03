@@ -61,7 +61,7 @@ func TestAuthError_Error(t *testing.T) {
 		Message:      "authentication failure",
 	}
 	got := e.Error()
-	want := "iscsi auth: authentication failure"
+	want := "iscsi auth: authentication failure (class=2 detail=1)"
 	if got != want {
 		t.Errorf("AuthError.Error() = %q, want %q", got, want)
 	}
