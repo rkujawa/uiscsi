@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 10-05-PLAN.md
-last_updated: "2026-04-03T10:45:48.742Z"
-last_activity: 2026-04-03
+stopped_at: Completed 13-01-PLAN.md
+last_updated: "2026-04-04T22:25:42.782Z"
+last_activity: 2026-04-05
 progress:
-  total_phases: 12
-  completed_phases: 12
-  total_plans: 38
-  completed_plans: 38
-  percent: 92
+  total_phases: 1
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 1
+  percent: 93
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-31)
 
 **Core value:** Full RFC 7143 compliance as a composable Go library
-**Current focus:** Phase 11 — audit-remediation-correctness-security-and-api-hardening
+**Current focus:** Phase 13 — pdu-wire-capture-framework-mocktarget-extensions-and-command-sequencing
 
 ## Current Position
 
-Phase: 11
-Plan: Not started
-Status: Executing Phase 11
-Last activity: 2026-04-03
+Phase: 13
+Plan: 1 of 2
+Status: Executing Phase 13
+Last activity: 2026-04-05
 
-Progress: [█████████░] 92%
+Progress: [█████████░] 93%
 
 ## Performance Metrics
 
@@ -79,6 +79,7 @@ Progress: [█████████░] 92%
 | Phase 10 P03 | 2min | 2 tasks | 2 files |
 | Phase 10 P04 | 2min | 2 tasks | 3 files |
 | Phase 10 P05 | 1min | 2 tasks | 2 files |
+| Phase 13 P01 | 4min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -148,6 +149,9 @@ Recent decisions affecting current work:
 - [Phase 10]: SenseLength prefix stripped with bounds-checked slice for graceful degradation
 - [Phase 10]: Accept TMF response 255 (Function Rejected) as valid per RFC 7143 Section 11.6.1
 - [Phase 10]: ITT 0x00000000 is valid (router starts at 0); only 0xFFFFFFFF reserved per RFC 7143
+- [Phase 13]: PDU capture Recorder decodes via pdu.DecodeBHS for typed field assertions
+- [Phase 13]: SessionState.Update handles immediate vs non-immediate CmdSN advancement per RFC 7143
+- [Phase 13]: HandleSCSIFunc uses atomic.Int32 for goroutine-safe call counter
 
 ### Roadmap Evolution
 
@@ -174,6 +178,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-03T00:17:30.497Z
-Stopped at: Completed 10-05-PLAN.md
+Last session: 2026-04-04T22:25:18.733Z
+Stopped at: Completed 13-01-PLAN.md
 Resume file: None
