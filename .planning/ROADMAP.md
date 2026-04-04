@@ -58,7 +58,10 @@ See [milestones/v1.0-ROADMAP.md](milestones/v1.0-ROADMAP.md) for full phase deta
   3. Test validates that CmdSN increments by exactly 1 for each non-immediate SCSI command observed on the wire
   4. Test validates that immediate delivery commands carry correct CmdSN values for both SCSI and TMF opcodes
   5. All new tests pass under `go test -race`
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 13-01-PLAN.md — PDU capture framework + MockTarget extensions (HandleSCSIFunc, SessionState)
+- [ ] 13-02-PLAN.md — CmdSN wire conformance tests (CMDSEQ-01, CMDSEQ-02, CMDSEQ-03)
 
 ### Phase 14: Data Transfer and R2T Wire Validation
 **Goal**: All Data-Out and Data-In PDU fields are verified at the wire level -- DataSN, F-bit, Buffer Offset, TTT echo, burst lengths, and R2T fulfillment ordering
@@ -146,7 +149,7 @@ Phases execute in numeric order: 13 -> 14 -> 15 -> 16 -> 17 -> 18 -> 19
 | 9. LIO E2E Tests | v1.0 | 2/2 | Complete | 2026-04-02 |
 | 10. E2E Coverage Expansion | v1.0 | 5/5 | Complete | 2026-04-03 |
 | 11. Audit Remediation | v1.0 | 4/4 | Complete | 2026-04-03 |
-| 13. PDU Wire Capture + CmdSN | v1.1 | 0/0 | Not started | - |
+| 13. PDU Wire Capture + CmdSN | v1.1 | 0/2 | Planned | - |
 | 14. Data Transfer + R2T | v1.1 | 0/0 | Not started | - |
 | 15. SCSI Write Mode | v1.1 | 0/0 | Not started | - |
 | 16. Error Injection + SNACK | v1.1 | 0/0 | Not started | - |
