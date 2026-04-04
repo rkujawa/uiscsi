@@ -149,7 +149,7 @@ Phases execute in numeric order: 13 -> 14 -> 15 -> 16 -> 17 -> 18 -> 19
 | 9. LIO E2E Tests | v1.0 | 2/2 | Complete | 2026-04-02 |
 | 10. E2E Coverage Expansion | v1.0 | 5/5 | Complete | 2026-04-03 |
 | 11. Audit Remediation | v1.0 | 4/4 | Complete | 2026-04-03 |
-| 13. PDU Wire Capture + CmdSN | v1.1 | 2/2 | Complete   | 2026-04-04 |
+| 13. PDU Wire Capture + CmdSN | v1.1 | 2/2 | Complete    | 2026-04-04 |
 | 14. Data Transfer + R2T | v1.1 | 0/0 | Not started | - |
 | 15. SCSI Write Mode | v1.1 | 0/0 | Not started | - |
 | 16. Error Injection + SNACK | v1.1 | 0/0 | Not started | - |
