@@ -1,0 +1,121 @@
+# v1.1 Requirements: Full Test Compliance and Coverage
+
+**Milestone:** v1.1
+**Created:** 2026-04-04
+**Source:** UNH-IOL Initiator Full Feature Phase Test Suite v0.1 (doc/initiator_ffp.pdf)
+**Reference:** doc/test_matrix_initiator_ffp.md
+
+## v1.1 Requirements
+
+### Command Sequencing
+
+- [ ] **CMDSEQ-01**: E2E test validates CmdSN increments by 1 for each non-immediate command on wire (FFP #1.1)
+- [ ] **CMDSEQ-02**: E2E test validates immediate delivery flag and CmdSN for non-TMF commands (FFP #2.1)
+- [ ] **CMDSEQ-03**: E2E test validates immediate delivery CmdSN for task management commands (FFP #2.2)
+- [ ] **CMDSEQ-04**: E2E test validates initiator respects zero command window (MaxCmdSN=ExpCmdSN-1) (FFP #3.1)
+- [ ] **CMDSEQ-05**: E2E test validates initiator uses large command window correctly (FFP #3.2)
+- [ ] **CMDSEQ-06**: E2E test validates initiator respects command window size of 1 (FFP #3.3)
+- [ ] **CMDSEQ-07**: E2E test validates command retry carries original ITT, CDB, CmdSN (FFP #4.1)
+- [ ] **CMDSEQ-08**: E2E test validates ExpStatSN gap detection triggers recovery (FFP #5.1)
+- [ ] **CMDSEQ-09**: E2E test validates MaxCmdSN in SCSI Response closes command window (FFP #16.5)
+
+### Data Transfer
+
+- [ ] **DATA-01**: E2E test validates Data-Out DataSN starts at 0 and increments per R2T sequence (FFP #6.1)
+- [ ] **DATA-02**: E2E test validates unsolicited data respects FirstBurstLength with solicited R2T follow-up (FFP #8.1)
+- [ ] **DATA-03**: E2E test validates no unsolicited data in R2T-only mode (FFP #8.2)
+- [ ] **DATA-04**: E2E test validates unsolicited Data-Out PDUs respect FirstBurstLength (FFP #8.3)
+- [ ] **DATA-05**: E2E test validates Data-Out echoes Target Transfer Tag from R2T (FFP #9.1)
+- [ ] **DATA-06**: E2E test validates status accepted in final Data-In PDU with S+F bits (FFP #10.1)
+- [ ] **DATA-07**: E2E test validates Data-In A-bit triggers SNACK DataACK at ERL>=1 (FFP #10.2)
+- [ ] **DATA-08**: E2E test validates Data-Out respects target MaxRecvDataSegmentLength (FFP #11.1.1)
+- [ ] **DATA-09**: E2E test validates initiator accepts Data-In with DataSegmentLength=0 (FFP #11.1.2)
+- [ ] **DATA-10**: E2E test validates F bit set on last unsolicited Data-Out PDU (FFP #11.2.1)
+- [ ] **DATA-11**: E2E test validates F bit set on last solicited Data-Out PDU (FFP #11.2.2)
+- [ ] **DATA-12**: E2E test validates DataSN per R2T sequence in Data-Out (FFP #11.3)
+- [ ] **DATA-13**: E2E test validates Buffer Offset increases correctly in Data-Out (FFP #11.4)
+- [ ] **DATA-14**: E2E test validates Expected Data Transfer Length matches actual transfer (FFP #16.6)
+
+### R2T Handling
+
+- [ ] **R2T-01**: E2E test validates single Data-Out response to R2T with correct TTT, offset, length (FFP #12.1)
+- [ ] **R2T-02**: E2E test validates multi-PDU response to R2T with F bit and continuous offsets (FFP #12.2)
+- [ ] **R2T-03**: E2E test validates R2T fulfillment order when DataSequenceInOrder=No (FFP #12.3)
+- [ ] **R2T-04**: E2E test validates parallel command R2T fulfillment ordering (FFP #12.4)
+
+### SNACK
+
+- [ ] **SNACK-01**: E2E test validates Data/R2T SNACK construction on DataSN gap (FFP #13.1)
+- [ ] **SNACK-02**: E2E test validates DataACK SNACK in response to A-bit (FFP #13.2)
+
+### Session Management
+
+- [ ] **SESS-01**: E2E test validates Logout after AsyncMessage code 1 on single connection (FFP #14.1)
+- [ ] **SESS-02**: E2E test validates Logout after AsyncMessage code 1 on multi-connection session (FFP #14.2)
+- [ ] **SESS-03**: E2E test validates NOP-Out ping response with TTT echo, ITT, I-bit, LUN (FFP #15.1)
+- [ ] **SESS-04**: E2E test validates NOP-Out ping request with valid ITT (FFP #15.2)
+- [ ] **SESS-05**: E2E test validates NOP-Out ExpStatSN confirmation variant (FFP #15.3)
+- [ ] **SESS-06**: E2E test validates clean logout exchange (FFP #17.1)
+- [ ] **SESS-07**: E2E test validates ERL 2 connection reassignment after drop (FFP #7.1)
+- [ ] **SESS-08**: E2E test validates ERL 2 task reassign on new connection (FFP #19.5)
+
+### SCSI Command
+
+- [ ] **SCSI-01**: E2E test validates Command PDU fields with ImmediateData=Yes (FFP #16.1.1)
+- [ ] **SCSI-02**: E2E test validates Command PDU fields with ImmediateData=No (FFP #16.1.2)
+- [ ] **SCSI-03**: E2E test validates unsolicited data F bit when EDTL=DSL (FFP #16.2.1)
+- [ ] **SCSI-04**: E2E test validates no unsolicited data with ImmediateData=No, InitialR2T=Yes (FFP #16.2.2)
+- [ ] **SCSI-05**: E2E test validates no immediate data with ImmediateData=No, InitialR2T=No (FFP #16.2.3)
+- [ ] **SCSI-06**: E2E test validates FirstBurstLength limit with ImmediateData=Yes, InitialR2T=No (FFP #16.2.4)
+- [ ] **SCSI-07**: E2E test validates F bit in SCSI Command when InitialR2T=Yes (FFP #16.3.1)
+
+### Error Handling
+
+- [ ] **ERR-01**: E2E test validates handling of CRC error sense data (FFP #16.4.1)
+- [ ] **ERR-02**: E2E test validates handling of SNACK reject followed by new command (FFP #16.4.2)
+- [ ] **ERR-03**: E2E test validates handling of unexpected unsolicited data error (FFP #16.4.3)
+- [ ] **ERR-04**: E2E test validates handling of "not enough unsolicited data" error (FFP #16.4.4)
+- [ ] **ERR-05**: E2E test validates handling of BUSY status 0x08 (FFP #16.4.5)
+- [ ] **ERR-06**: E2E test validates handling of RESERVATION CONFLICT 0x18 (FFP #16.4.6)
+
+### Text Negotiation
+
+- [ ] **TEXT-01**: E2E test validates Text Request text fields (FFP #18.1)
+- [ ] **TEXT-02**: E2E test validates Text Request Initiator Task Tag uniqueness (FFP #18.2)
+- [ ] **TEXT-03**: E2E test validates Text Request Target Transfer Tag initial=0xffffffff (FFP #18.3.1)
+- [ ] **TEXT-04**: E2E test validates Text Request Target Transfer Tag continuation (FFP #18.3.2)
+- [ ] **TEXT-05**: E2E test validates Text Request other parameters (FFP #18.4)
+- [ ] **TEXT-06**: E2E test validates Text Request negotiation reset (FFP #18.5)
+
+### Task Management
+
+- [ ] **TMF-01**: E2E test validates TMF CmdSN handling (FFP #19.1)
+- [ ] **TMF-02**: E2E test validates TMF LUN field encoding (FFP #19.2)
+- [ ] **TMF-03**: E2E test validates TMF RefCmdSN for referenced task (FFP #19.3)
+- [ ] **TMF-04**: E2E test validates Abort Task Set — all tasks on LUN aborted (FFP #19.4.1)
+- [ ] **TMF-05**: E2E test validates Abort Task Set — no new tasks during abort (FFP #19.4.2)
+- [ ] **TMF-06**: E2E test validates Abort Task Set — response after tasks cleared (FFP #19.4.3)
+
+### Async Messages
+
+- [ ] **ASYNC-01**: E2E test validates Async Message logout request handling (FFP #20.1)
+- [ ] **ASYNC-02**: E2E test validates Async Message connection drop handling (FFP #20.2)
+- [ ] **ASYNC-03**: E2E test validates Async Message session drop handling (FFP #20.3)
+- [ ] **ASYNC-04**: E2E test validates Async Message negotiation request handling (FFP #20.4)
+
+## Future Requirements
+
+None — v1.1 targets complete FFP coverage.
+
+## Out of Scope
+
+- Target-side testing (covered by separate target_ffp.pdf suite)
+- Login Phase tests (covered by separate login test suite, not in FFP)
+- Performance/stress testing (not part of IOL conformance)
+- Multi-initiator concurrent tests (IOL tests are single-initiator)
+
+## Traceability
+
+| REQ-ID | Phase | Plan | Status |
+|--------|-------|------|--------|
+| (populated by roadmapper) | | | |
