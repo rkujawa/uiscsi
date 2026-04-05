@@ -61,15 +61,15 @@ Full RFC 7143 compliance as a composable Go library — the spec is non-negotiab
 - Command window E2E tests: zero window, large window, window-of-1
 - Remaining FFP tests: immediate delivery, command retry, ExpStatSN gap, zero-length Data-In, R2T ordering, NOP-Out variants
 
-## Current State (Phase 13 complete, 2026-04-04)
+## Current State (Phase 18 complete, 2026-04-05)
 
 - **26,060 lines of Go** across 10 packages, zero external runtime dependencies
-- **98 requirements** verified (81 core + 17 audit remediation), plus 3 v1.1 (CMDSEQ-01/02/03)
+- **98 requirements** verified (81 core + 17 audit remediation), plus 11 v1.1 (CMDSEQ-01 through CMDSEQ-09, SESS-07, SESS-08)
 - **19 E2E tests** against real Linux LIO kernel target
-- **25 conformance tests** against in-process mock target (22 original + 3 CmdSN wire tests)
+- **33 conformance tests** against in-process mock target (phases 13-18: wire-level PDU capture tests)
 - **CLI tool:** `uiscsi-ls` for lsscsi-style discovery
-- **12 phases** completed in 4 days (270 commits)
-- **Phase 13 complete:** PDU capture framework (`test/pducapture/`) and MockTarget extensions (HandleSCSIFunc, SessionState) — foundation for all v1.1 wire-level conformance tests
+- **18 phases** completed
+- **Phase 18 complete:** Command window enforcement (zero/large/1), same-connection retry with original ITT/CDB/CmdSN (RFC 7143 §6.2.1), ExpStatSN gap + SNACK recovery, ERL 2 connection reassignment + task reassign. Production bugs fixed: cmdwindow zero-window detection, MaxCmdSN monotonic guard, SNACK timeout wiring
 
 ## Context
 
