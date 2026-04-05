@@ -408,7 +408,7 @@ Key findings:
 | A1 | ASC=0x0C/ASCQ=0x0D for "unexpected unsolicited data" and ASC=0x0C/ASCQ=0x0E for "not enough unsolicited data" | Code Examples (ERR-03, ERR-04) | Wrong sense codes in test -- would still test error surfacing but with incorrect UNH-IOL compliance codes. Verify against SPC-4 Annex D or internal/scsi/sense.go. |
 | A2 | ASC=0x47/ASCQ=0x05 for CRC error sense data | Code Examples (ERR-01) | Same risk as A1. Need to verify the exact ASC/ASCQ pair that targets use for iSCSI CRC errors. |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **ERR-02 Reject Handling Flow**
    - What we know: Session.handleUnsolicited handles Reject by cancelling the task (session.go:501). The test needs to verify the initiator issues a *new* command after the reject, not a retry.
