@@ -106,7 +106,7 @@ Plans:
 **Plans**: 2 plans
 Plans:
 - [ ] 16-01-PLAN.md — HandleSCSIWithStatus helper + error handling tests (ERR-01 through ERR-06)
-- [ ] 16-02-PLAN.md — SNACK wire conformance tests (SNACK-01, SNACK-02)
+- [x] 16-02-PLAN.md — SNACK wire conformance tests (SNACK-01, SNACK-02)
 
 ### Phase 17: Session Management, NOP-Out, and Async Messages
 **Goal**: MockTarget can inject async messages and the initiator responds correctly to all session management scenarios
@@ -163,7 +163,7 @@ Phases execute in numeric order: 13 -> 14 -> 15 -> 16 -> 17 -> 18 -> 19
 | 13. PDU Wire Capture + CmdSN | v1.1 | 2/2 | Complete    | 2026-04-04 |
 | 14. Data Transfer + R2T | v1.1 | 4/4 | Complete    | 2026-04-05 |
 | 15. SCSI Write Mode | v1.1 | 2/2 | Complete    | 2026-04-05 |
-| 16. Error Injection + SNACK | v1.1 | 0/2 | Not started | - |
+| 16. Error Injection + SNACK | v1.1 | 1/2 | In Progress|  |
 | 17. Session Mgmt + Async | v1.1 | 0/0 | Not started | - |
 | 18. Cmd Window + ERL 2 | v1.1 | 0/0 | Not started | - |
 | 19. TMF + Text | v1.1 | 0/0 | Not started | - |

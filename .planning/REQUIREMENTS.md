@@ -45,8 +45,8 @@
 
 ### SNACK
 
-- [ ] **SNACK-01**: E2E test validates Data/R2T SNACK construction on DataSN gap (FFP #13.1)
-- [ ] **SNACK-02**: E2E test validates DataACK SNACK in response to A-bit (FFP #13.2)
+- [x] **SNACK-01**: E2E test validates Data/R2T SNACK construction on DataSN gap (FFP #13.1)
+- [x] **SNACK-02**: E2E test validates DataACK SNACK in response to A-bit (FFP #13.2)
 
 ### Session Management
 
