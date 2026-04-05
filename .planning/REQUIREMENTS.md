@@ -98,10 +98,10 @@
 
 ### Async Messages
 
-- [ ] **ASYNC-01**: E2E test validates Async Message logout request handling (FFP #20.1)
-- [ ] **ASYNC-02**: E2E test validates Async Message connection drop handling (FFP #20.2)
-- [ ] **ASYNC-03**: E2E test validates Async Message session drop handling (FFP #20.3)
-- [ ] **ASYNC-04**: E2E test validates Async Message negotiation request handling (FFP #20.4)
+- [x] **ASYNC-01**: E2E test validates Async Message logout request handling (FFP #20.1)
+- [x] **ASYNC-02**: E2E test validates Async Message connection drop handling (FFP #20.2)
+- [x] **ASYNC-03**: E2E test validates Async Message session drop handling (FFP #20.3)
+- [x] **ASYNC-04**: E2E test validates Async Message negotiation request handling (FFP #20.4)
 
 ## Future Requirements
 
