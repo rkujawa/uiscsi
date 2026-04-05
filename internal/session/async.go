@@ -128,10 +128,17 @@ func (s *Session) handleTargetRequestedLogout(evt AsyncEvent) {
 // parameters after receiving AsyncEvent code 4. Per RFC 7143 Section 11.9,
 // the initiator MUST send a Text Request within Parameter3 seconds.
 func (s *Session) renegotiate(ctx context.Context) error {
+	// Read params under lock to avoid races with concurrent renegotiations.
+	s.mu.Lock()
+	maxRecvDSL := s.params.MaxRecvDataSegmentLength
+	maxBurst := s.params.MaxBurstLength
+	firstBurst := s.params.FirstBurstLength
+	s.mu.Unlock()
+
 	data := login.EncodeTextKV([]login.KeyValue{
-		{Key: "MaxRecvDataSegmentLength", Value: strconv.Itoa(int(s.params.MaxRecvDataSegmentLength))},
-		{Key: "MaxBurstLength", Value: strconv.Itoa(int(s.params.MaxBurstLength))},
-		{Key: "FirstBurstLength", Value: strconv.Itoa(int(s.params.FirstBurstLength))},
+		{Key: "MaxRecvDataSegmentLength", Value: strconv.Itoa(int(maxRecvDSL))},
+		{Key: "MaxBurstLength", Value: strconv.Itoa(int(maxBurst))},
+		{Key: "FirstBurstLength", Value: strconv.Itoa(int(firstBurst))},
 	})
 
 	cmdSN, err := s.window.acquire(ctx)
@@ -203,7 +210,10 @@ func (s *Session) renegotiate(ctx context.Context) error {
 }
 
 // applyRenegotiatedParams updates session parameters from TextResp key-values.
+// Holds s.mu to avoid races with concurrent renegotiate() reads.
 func (s *Session) applyRenegotiatedParams(kvs []login.KeyValue) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	for _, kv := range kvs {
 		switch kv.Key {
 		case "MaxRecvDataSegmentLength":
