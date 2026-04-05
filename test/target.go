@@ -165,7 +165,8 @@ type AsyncParams struct {
 func (mt *MockTarget) SendAsyncMsg(tc *TargetConn, event uint8, params AsyncParams) error {
 	async := &pdu.AsyncMsg{
 		Header: pdu.Header{
-			Final: true,
+			Final:            true,
+			InitiatorTaskTag: 0xFFFFFFFF, // RFC 7143 S11.9: ITT=0xFFFFFFFF for AsyncMsg
 		},
 		StatSN:     tc.NextStatSN(),
 		ExpCmdSN:   mt.session.ExpCmdSN(),
