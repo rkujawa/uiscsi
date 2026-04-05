@@ -1,6 +1,6 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.1
+milestone: v1.1.0
 milestone_name: Full Test Compliance and Coverage
 status: executing
 stopped_at: Phase 19 context gathered

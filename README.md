@@ -2,7 +2,7 @@
 
 A pure-userspace iSCSI initiator library for Go.
 
-**Status:** v1.1 -- full RFC 7143 compliance with 86 wire-level conformance tests and 20 E2E tests against real LIO kernel targets.
+**Status:** v1.1.0 -- full RFC 7143 compliance with 86 wire-level conformance tests and 20 E2E tests against real LIO kernel targets.
 
 ## Overview
 

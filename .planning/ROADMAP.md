@@ -3,7 +3,7 @@
 ## Milestones
 
 - ✅ **v1.0** — Phases 1-11 (shipped 2026-04-03)
-- 🚧 **v1.1 Full Test Compliance and Coverage** — Phases 13-19 (in progress)
+- 🚧 **v1.1.0 Full Test Compliance and Coverage** — Phases 13-19 (in progress)
 
 ## Phases
 
@@ -29,7 +29,7 @@ See [milestones/v1.0-ROADMAP.md](milestones/v1.0-ROADMAP.md) for full phase deta
 
 </details>
 
-### 🚧 v1.1 Full Test Compliance and Coverage (In Progress)
+### 🚧 v1.1.0 Full Test Compliance and Coverage (In Progress)
 
 **Milestone Goal:** Achieve full UNH-IOL Initiator FFP test suite coverage -- promote all 66 tests from partial/not-covered to covered with wire-level validation.
 
@@ -50,7 +50,7 @@ See [milestones/v1.0-ROADMAP.md](milestones/v1.0-ROADMAP.md) for full phase deta
 
 ### Phase 13: PDU Wire Capture Framework, MockTarget Extensions, and Command Sequencing
 **Goal**: Every subsequent phase can capture PDUs on the wire and assert field-level correctness; MockTarget supports fault injection, async messages, and command window control; validated by basic CmdSN sequencing tests
-**Depends on**: Nothing (first v1.1 phase)
+**Depends on**: Nothing (first v1.1.0 phase)
 **Requirements**: CMDSEQ-01, CMDSEQ-02, CMDSEQ-03
 **Success Criteria** (what must be TRUE):
   1. A reusable PDU capture/assertion helper exists that records all PDUs exchanged during a test and allows field-level queries (opcode, CmdSN, DataSN, flags, etc.)
@@ -172,10 +172,10 @@ Phases execute in numeric order: 13 -> 14 -> 15 -> 16 -> 17 -> 18 -> 19
 | 9. LIO E2E Tests | v1.0 | 2/2 | Complete | 2026-04-02 |
 | 10. E2E Coverage Expansion | v1.0 | 5/5 | Complete | 2026-04-03 |
 | 11. Audit Remediation | v1.0 | 4/4 | Complete | 2026-04-03 |
-| 13. PDU Wire Capture + CmdSN | v1.1 | 2/2 | Complete    | 2026-04-04 |
-| 14. Data Transfer + R2T | v1.1 | 4/4 | Complete    | 2026-04-05 |
-| 15. SCSI Write Mode | v1.1 | 2/2 | Complete    | 2026-04-05 |
-| 16. Error Injection + SNACK | v1.1 | 2/2 | Complete   | 2026-04-05 |
-| 17. Session Mgmt + Async | v1.1 | 3/3 | Complete   | 2026-04-05 |
-| 18. Cmd Window + ERL 2 | v1.1 | 4/4 | Complete    | 2026-04-05 |
-| 19. TMF + Text | v1.1 | 2/2 | Complete    | 2026-04-05 |
+| 13. PDU Wire Capture + CmdSN | v1.1.0 | 2/2 | Complete    | 2026-04-04 |
+| 14. Data Transfer + R2T | v1.1.0 | 4/4 | Complete    | 2026-04-05 |
+| 15. SCSI Write Mode | v1.1.0 | 2/2 | Complete    | 2026-04-05 |
+| 16. Error Injection + SNACK | v1.1.0 | 2/2 | Complete   | 2026-04-05 |
+| 17. Session Mgmt + Async | v1.1.0 | 3/3 | Complete   | 2026-04-05 |
+| 18. Cmd Window + ERL 2 | v1.1.0 | 4/4 | Complete    | 2026-04-05 |
+| 19. TMF + Text | v1.1.0 | 2/2 | Complete    | 2026-04-05 |

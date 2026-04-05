@@ -48,7 +48,7 @@ Full RFC 7143 compliance as a composable Go library — the spec is non-negotiab
 - Kernel integration / block device emulation — defeats the purpose of pure userspace
 - Boot from iSCSI — requires kernel involvement by nature
 
-## Current Milestone: v1.1 Full Test Compliance and Coverage
+## Current Milestone: v1.1.0 Full Test Compliance and Coverage
 
 **Goal:** Achieve full UNH-IOL Initiator FFP test suite coverage — promote all 62 tests from partial/not-covered to covered with wire-level E2E validation.
 
@@ -64,7 +64,7 @@ Full RFC 7143 compliance as a composable Go library — the spec is non-negotiab
 ## Current State (Phase 18 complete, 2026-04-05)
 
 - **26,060 lines of Go** across 10 packages, zero external runtime dependencies
-- **98 requirements** verified (81 core + 17 audit remediation), plus 11 v1.1 (CMDSEQ-01 through CMDSEQ-09, SESS-07, SESS-08)
+- **98 requirements** verified (81 core + 17 audit remediation), plus 11 v1.1.0 (CMDSEQ-01 through CMDSEQ-09, SESS-07, SESS-08)
 - **19 E2E tests** against real Linux LIO kernel target
 - **33 conformance tests** against in-process mock target (phases 13-18: wire-level PDU capture tests)
 - **CLI tool:** `uiscsi-ls` for lsscsi-style discovery
