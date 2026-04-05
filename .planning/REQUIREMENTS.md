@@ -51,9 +51,9 @@
 ### Session Management
 
 - [ ] **SESS-01**: E2E test validates Logout after AsyncMessage code 1 on single connection (FFP #14.1)
-- [ ] **SESS-02**: E2E test validates Logout after AsyncMessage code 1 on multi-connection session (FFP #14.2)
-- [ ] **SESS-03**: E2E test validates NOP-Out ping response with TTT echo, ITT, I-bit, LUN (FFP #15.1)
-- [ ] **SESS-04**: E2E test validates NOP-Out ping request with valid ITT (FFP #15.2)
+- [x] **SESS-02**: E2E test validates Logout after AsyncMessage code 1 on multi-connection session (FFP #14.2)
+- [x] **SESS-03**: E2E test validates NOP-Out ping response with TTT echo, ITT, I-bit, LUN (FFP #15.1)
+- [x] **SESS-04**: E2E test validates NOP-Out ping request with valid ITT (FFP #15.2)
 - [ ] **SESS-05**: E2E test validates NOP-Out ExpStatSN confirmation variant (FFP #15.3)
 - [ ] **SESS-06**: E2E test validates clean logout exchange (FFP #17.1)
 - [ ] **SESS-07**: E2E test validates ERL 2 connection reassignment after drop (FFP #7.1)

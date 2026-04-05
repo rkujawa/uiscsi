@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Full Test Compliance and Coverage
 status: executing
-stopped_at: Phase 17 context gathered
-last_updated: "2026-04-05T11:05:57.411Z"
+stopped_at: Completed 17-01-PLAN.md
+last_updated: "2026-04-05T11:31:42.183Z"
 last_activity: 2026-04-05 -- Phase 17 planning complete
 progress:
   total_phases: 7
   completed_phases: 4
   total_plans: 13
-  completed_plans: 10
-  percent: 77
+  completed_plans: 11
+  percent: 85
 ---
 
 # Project State
@@ -84,6 +84,7 @@ Progress: [█████████░] 93%
 | Phase 13 P02 | 3min | 2 tasks | 1 files |
 | Phase 16 P02 | 5min | 2 tasks | 1 files |
 | Phase 16 P01 | 7min | 2 tasks | 2 files |
+| Phase 17 P01 | 5min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -161,6 +162,8 @@ Recent decisions affecting current work:
 - [Phase 16]: Status-only final DataIn PDU requires BufferOffset matching cumulative data offset
 - [Phase 16]: HandleSCSIWithStatus uses SessionState.Update for correct CmdSN tracking
 - [Phase 16]: ERR-02 SNACK Reject test registers explicit SNACK handler to drain Status SNACK timer PDUs
+- [Phase 17]: HandleText echoes received KVs as-accepted for renegotiation simplicity
+- [Phase 17]: applyRenegotiatedParams only updates known operational keys per T-17-02 mitigation
 
 ### Roadmap Evolution
 
@@ -187,6 +190,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-05T10:27:04.117Z
-Stopped at: Phase 17 context gathered
-Resume file: .planning/phases/17-session-management-nop-out-and-async-messages/17-CONTEXT.md
+Last session: 2026-04-05T11:31:42.177Z
+Stopped at: Completed 17-01-PLAN.md
+Resume file: None
