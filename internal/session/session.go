@@ -142,8 +142,9 @@ func (s *Session) Submit(ctx context.Context, cmd Command) (<-chan Result, error
 
 	// Create task for tracking this command.
 	tk := newTask(itt, cmd.Read, isWrite)
-	tk.lun = cmd.LUN // Store LUN for TMF LUN-based cleanup
-	tk.cmd = cmd      // Store for retry during ERL 0 recovery
+	tk.lun = cmd.LUN  // Store LUN for TMF LUN-based cleanup
+	tk.cmd = cmd       // Store for retry during ERL 0 recovery
+	tk.cmdSN = cmdSN   // Store for same-connection retry at ERL >= 1
 
 	// Populate ERL fields for SNACK handling (DataSN gap detection, A-bit DataACK).
 	tk.erl = uint32(s.params.ErrorRecoveryLevel)
@@ -499,8 +500,15 @@ func (s *Session) handleUnsolicited(raw *transport.RawPDU) {
 				tk, ok := s.tasks[rejectedITT]
 				s.mu.Unlock()
 				if ok {
-					tk.cancel(fmt.Errorf("session: target rejected PDU (reason=0x%02X, itt=0x%08x)", reject.Reason, rejectedITT))
-					s.cleanupTask(rejectedITT)
+					if tk.erl >= 1 {
+						s.cfg.logger.Info("session: unsolicited Reject at ERL>=1, retrying same connection",
+							"itt", fmt.Sprintf("0x%08x", rejectedITT),
+							"reason", fmt.Sprintf("0x%02X", reject.Reason))
+						s.retrySameConnection(tk)
+					} else {
+						tk.cancel(fmt.Errorf("session: target rejected PDU (reason=0x%02X, itt=0x%08x)", reject.Reason, rejectedITT))
+						s.cleanupTask(rejectedITT)
+					}
 				}
 			}
 		} else if len(reject.Data) >= 1 {
@@ -588,9 +596,19 @@ func (s *Session) taskLoop(tk *task, pduCh <-chan *transport.RawPDU) {
 			p.Data = raw.DataSegment
 			s.window.update(p.ExpCmdSN, p.MaxCmdSN)
 			s.updateStatSN(p.StatSN)
-			tk.cancel(fmt.Errorf("session: target rejected PDU (reason=0x%02X, itt=0x%08x)", p.Reason, tk.itt))
-			s.cleanupTask(tk.itt)
-			return
+			if tk.erl >= 1 {
+				// ERL >= 1: same-connection retry with original ITT, CDB, CmdSN
+				// per RFC 7143 Section 6.2.1.
+				s.cfg.logger.Info("session: Reject at ERL>=1, retrying same connection",
+					"itt", fmt.Sprintf("0x%08x", tk.itt),
+					"reason", fmt.Sprintf("0x%02X", p.Reason))
+				s.retrySameConnection(tk)
+				// Do NOT return — continue draining pduCh for the retry response.
+			} else {
+				tk.cancel(fmt.Errorf("session: target rejected PDU (reason=0x%02X, itt=0x%08x)", p.Reason, tk.itt))
+				s.cleanupTask(tk.itt)
+				return
+			}
 
 		default:
 			s.cfg.logger.Warn("session: unexpected PDU for task",
@@ -606,4 +624,81 @@ func (s *Session) cleanupTask(itt uint32) {
 	s.mu.Lock()
 	delete(s.tasks, itt)
 	s.mu.Unlock()
+}
+
+// retrySameConnection re-sends a SCSI command on the same connection using
+// the original ITT, CDB, and CmdSN per RFC 7143 Section 6.2.1. This is the
+// ERL >= 1 same-connection retry path, distinct from the ERL 0 reconnect
+// retry in retryTasks which allocates new ITT and CmdSN.
+func (s *Session) retrySameConnection(tk *task) {
+	cmd := tk.cmd
+
+	// Reset read buffer for reads.
+	tk.nextDataSN = 0
+	tk.nextOffset = 0
+	if tk.isRead && tk.buf != nil {
+		tk.buf.Reset()
+	}
+
+	// Re-read immediate data for write commands.
+	var immediateData []byte
+	if tk.isWrite && s.params.ImmediateData && tk.reader != nil {
+		if seeker, ok := tk.reader.(io.Seeker); ok {
+			if _, err := seeker.Seek(0, io.SeekStart); err != nil {
+				tk.cancel(fmt.Errorf("session: same-connection retry seek failed: %w", err))
+				return
+			}
+			tk.bytesSent = 0
+		} else {
+			tk.cancel(ErrRetryNotPossible)
+			return
+		}
+		immLen := min(s.params.FirstBurstLength, s.params.MaxRecvDataSegmentLength)
+		immBuf := make([]byte, immLen)
+		n, readErr := io.ReadFull(tk.reader, immBuf)
+		if readErr != nil && readErr != io.ErrUnexpectedEOF {
+			tk.cancel(fmt.Errorf("session: same-connection retry read immediate data: %w", readErr))
+			return
+		}
+		immediateData = immBuf[:n]
+		tk.bytesSent = uint32(n)
+	}
+
+	scsiCmd := &pdu.SCSICommand{
+		Header: pdu.Header{
+			Final:            true,
+			InitiatorTaskTag: tk.itt, // original ITT
+			DataSegmentLen:   uint32(len(immediateData)),
+		},
+		Read:                       cmd.Read,
+		Write:                      cmd.Write,
+		Attr:                       cmd.TaskAttributes,
+		ExpectedDataTransferLength: cmd.ExpectedDataTransferLen,
+		CmdSN:                      tk.cmdSN, // original CmdSN
+		ExpStatSN:                  s.getExpStatSN(),
+		CDB:                        cmd.CDB, // original CDB
+		ImmediateData:              immediateData,
+	}
+	scsiCmd.Header.LUN = pdu.EncodeSAMLUN(cmd.LUN)
+
+	bhs, encErr := scsiCmd.MarshalBHS()
+	if encErr != nil {
+		tk.cancel(fmt.Errorf("session: same-connection retry encode: %w", encErr))
+		return
+	}
+
+	raw := &transport.RawPDU{BHS: bhs}
+	if len(immediateData) > 0 {
+		raw.DataSegment = immediateData
+	}
+	s.stampDigests(raw)
+
+	select {
+	case s.writeCh <- raw:
+		s.cfg.logger.Info("session: same-connection retry sent",
+			"itt", fmt.Sprintf("0x%08x", tk.itt),
+			"cmd_sn", tk.cmdSN)
+	default:
+		tk.cancel(fmt.Errorf("session: same-connection retry write channel full"))
+	}
 }

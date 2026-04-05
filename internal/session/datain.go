@@ -18,6 +18,7 @@ type task struct {
 	itt        uint32
 	lun        uint64        // stored for TMF LUN-based cleanup (AbortTaskSet, LUNReset, ClearTaskSet)
 	cmd        Command       // stored for retry during ERL 0 recovery
+	cmdSN      uint32        // stored for same-connection retry at ERL >= 1 (RFC 7143 Section 6.2.1)
 	buf        *bytes.Buffer // accumulates Data-In payload for read commands
 	resultCh   chan Result
 	nextDataSN uint32
