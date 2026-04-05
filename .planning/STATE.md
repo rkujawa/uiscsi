@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Full Test Compliance and Coverage
 status: executing
-stopped_at: Completed 16-02-PLAN.md
-last_updated: "2026-04-05T09:40:57.305Z"
+stopped_at: Completed 16-01-PLAN.md
+last_updated: "2026-04-05T09:42:58.569Z"
 last_activity: 2026-04-05 -- Phase 16 planning complete
 progress:
   total_phases: 7
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 10
-  completed_plans: 9
-  percent: 90
+  completed_plans: 10
+  percent: 100
 ---
 
 # Project State
@@ -83,6 +83,7 @@ Progress: [█████████░] 93%
 | Phase 13 P01 | 4min | 2 tasks | 4 files |
 | Phase 13 P02 | 3min | 2 tasks | 1 files |
 | Phase 16 P02 | 5min | 2 tasks | 1 files |
+| Phase 16 P01 | 7min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -158,6 +159,8 @@ Recent decisions affecting current work:
 - [Phase 13]: Solicited NOP-In from target (TTT!=0xFFFFFFFF) to trigger deterministic NOP-Out in conformance tests
 - [Phase 13]: Custom NOP-Out handler with SessionState.Update(immediate=true) for correct ExpCmdSN in CmdSN conformance tests
 - [Phase 16]: Status-only final DataIn PDU requires BufferOffset matching cumulative data offset
+- [Phase 16]: HandleSCSIWithStatus uses SessionState.Update for correct CmdSN tracking
+- [Phase 16]: ERR-02 SNACK Reject test registers explicit SNACK handler to drain Status SNACK timer PDUs
 
 ### Roadmap Evolution
 
@@ -184,6 +187,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-05T09:40:57.301Z
-Stopped at: Completed 16-02-PLAN.md
+Last session: 2026-04-05T09:42:58.562Z
+Stopped at: Completed 16-01-PLAN.md
 Resume file: None

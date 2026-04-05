@@ -41,7 +41,7 @@ See [milestones/v1.0-ROADMAP.md](milestones/v1.0-ROADMAP.md) for full phase deta
 - [x] **Phase 13: PDU Wire Capture Framework and Command Sequencing** - Test infrastructure for PDU-level assertions plus basic CmdSN wire validation (completed 2026-04-04)
 - [x] **Phase 14: Data Transfer and R2T Wire Validation** - Data-Out/Data-In field assertions and R2T fulfillment verification on the wire (completed 2026-04-05)
 - [x] **Phase 15: SCSI Command Write Mode Wire Tests** - ImmediateData/InitialR2T/FirstBurstLength matrix with PDU-level verification (completed 2026-04-05)
-- [ ] **Phase 16: Error Injection and SCSI Error Handling** - MockTarget error injection for status codes, sense data, SNACK reject, and DataSN gaps
+- [x] **Phase 16: Error Injection and SCSI Error Handling** - MockTarget error injection for status codes, sense data, SNACK reject, and DataSN gaps (completed 2026-04-05)
 - [ ] **Phase 17: Session Management, NOP-Out, and Async Messages** - Async message injection, NOP-Out variants, and logout wire validation
 - [ ] **Phase 18: Command Window, Retry, and ERL 2** - Command window enforcement, command retry wire validation, and ERL 2 connection reassignment
 - [ ] **Phase 19: Task Management and Text Negotiation** - TMF field validation, Abort Task Set behavior, and Text Request wire tests
@@ -105,7 +105,7 @@ Plans:
   4. Tests verify initiator constructs Data/R2T SNACK on DataSN gap and DataACK SNACK in response to A-bit, both with correct PDU fields on the wire
 **Plans**: 2 plans
 Plans:
-- [ ] 16-01-PLAN.md — HandleSCSIWithStatus helper + error handling tests (ERR-01 through ERR-06)
+- [x] 16-01-PLAN.md — HandleSCSIWithStatus helper + error handling tests (ERR-01 through ERR-06)
 - [x] 16-02-PLAN.md — SNACK wire conformance tests (SNACK-01, SNACK-02)
 
 ### Phase 17: Session Management, NOP-Out, and Async Messages
@@ -163,7 +163,7 @@ Phases execute in numeric order: 13 -> 14 -> 15 -> 16 -> 17 -> 18 -> 19
 | 13. PDU Wire Capture + CmdSN | v1.1 | 2/2 | Complete    | 2026-04-04 |
 | 14. Data Transfer + R2T | v1.1 | 4/4 | Complete    | 2026-04-05 |
 | 15. SCSI Write Mode | v1.1 | 2/2 | Complete    | 2026-04-05 |
-| 16. Error Injection + SNACK | v1.1 | 1/2 | In Progress|  |
+| 16. Error Injection + SNACK | v1.1 | 2/2 | Complete   | 2026-04-05 |
 | 17. Session Mgmt + Async | v1.1 | 0/0 | Not started | - |
 | 18. Cmd Window + ERL 2 | v1.1 | 0/0 | Not started | - |
 | 19. TMF + Text | v1.1 | 0/0 | Not started | - |

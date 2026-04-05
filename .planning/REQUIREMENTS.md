@@ -71,12 +71,12 @@
 
 ### Error Handling
 
-- [ ] **ERR-01**: E2E test validates handling of CRC error sense data (FFP #16.4.1)
-- [ ] **ERR-02**: E2E test validates handling of SNACK reject followed by new command (FFP #16.4.2)
-- [ ] **ERR-03**: E2E test validates handling of unexpected unsolicited data error (FFP #16.4.3)
-- [ ] **ERR-04**: E2E test validates handling of "not enough unsolicited data" error (FFP #16.4.4)
-- [ ] **ERR-05**: E2E test validates handling of BUSY status 0x08 (FFP #16.4.5)
-- [ ] **ERR-06**: E2E test validates handling of RESERVATION CONFLICT 0x18 (FFP #16.4.6)
+- [x] **ERR-01**: E2E test validates handling of CRC error sense data (FFP #16.4.1)
+- [x] **ERR-02**: E2E test validates handling of SNACK reject followed by new command (FFP #16.4.2)
+- [x] **ERR-03**: E2E test validates handling of unexpected unsolicited data error (FFP #16.4.3)
+- [x] **ERR-04**: E2E test validates handling of "not enough unsolicited data" error (FFP #16.4.4)
+- [x] **ERR-05**: E2E test validates handling of BUSY status 0x08 (FFP #16.4.5)
+- [x] **ERR-06**: E2E test validates handling of RESERVATION CONFLICT 0x18 (FFP #16.4.6)
 
 ### Text Negotiation
 
