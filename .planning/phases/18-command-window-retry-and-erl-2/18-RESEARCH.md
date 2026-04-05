@@ -305,22 +305,13 @@ func (ss *SessionState) SetMaxCmdSNDelta(delta int32) {
 | A2 | CMDSEQ-07 retry behavior: after a Reject at ERL=1, the initiator cancels the task (caller gets error) rather than retrying with same ITT/CmdSN on the same connection | Pitfall 2 | Test would assert wrong behavior -- need to verify whether the implementation does same-connection retry or task cancellation |
 | A3 | CMDSEQ-08: the initiator has no explicit StatSN gap detection in `updateStatSN()` -- recovery relies on the SNACK timer (Status SNACK) firing when no final status arrives | Pitfall 5 | If the initiator simply accepts the jumped StatSN with no recovery action, CMDSEQ-08 may need production code changes |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **ERL 2 Automatic Dispatch**
-   - What we know: `replaceConnection()` exists and is unit-tested, but `readPumpLoop` always calls `triggerReconnect()` (ERL 0)
-   - What's unclear: Is there a code path that dispatches to ERL 2 based on `params.ErrorRecoveryLevel >= 2`? Or must the conformance test call it differently?
-   - Recommendation: Check if `triggerReconnect` checks ERL and dispatches to `replaceConnection`. If not, the ERL 2 conformance test should use an internal test (not external package) to call `replaceConnection` directly, OR the test should trigger ERL 2 via `WithOperationalOverrides` + connection drop and verify the session uses the correct recovery path. If the dispatch is missing, this may require a small production code fix (adding ERL check to `triggerReconnect`).
+1. **ERL 2 Automatic Dispatch** — RESOLVED: Plan 18-03 Task 1 adds ERL dispatch to `triggerReconnect` (production code fix). When `params.ErrorRecoveryLevel >= 2`, dispatches to `replaceConnection` instead of `reconnect`. ERL 0 fallback on failure.
 
-2. **CMDSEQ-07 Retry Semantics**
-   - What we know: Phase 16 ERR-02 uses Reject + new command (different ITT/CmdSN). FFP #4.1 says retry MUST carry original ITT, CDB, CmdSN.
-   - What's unclear: Does the initiator actually retry with original fields (same-connection retry per RFC 7143 Section 6.2.1) or does it fail the task and let the caller re-issue?
-   - Recommendation: The `retryTasks` in `recovery.go` uses NEW ITT and CmdSN (line 224-270). This is ERL 0 reconnect retry, not same-connection retry. For CMDSEQ-07 (same connection, same fields), we need to verify if there is a separate code path. If not, CMDSEQ-07 may test the "caller re-issues" behavior rather than protocol-level retry with original fields.
+2. **CMDSEQ-07 Retry Semantics** — RESOLVED: `retryTasks` in recovery.go always allocates new ITT/CmdSN (line 224-270). No same-connection retry with original fields exists. Plan 18-02 tests caller-reissue behavior (new ITT/CmdSN, same CDB) with TODO documenting that FFP #4.1 same-connection retry is not implemented.
 
-3. **CMDSEQ-08 Gap Detection Threshold**
-   - What we know: `updateStatSN()` advances ExpStatSN on any serial-greater value with no gap limit check
-   - What's unclear: Whether the SNACK timer (Status SNACK) provides adequate "recovery action" for FFP #5.1
-   - Recommendation: FFP #5.1 says the DUT may choose to close the session at ERL=0. At ERL>=1, Status SNACK sent by the timer is a valid recovery action. Test at ERL=1 and verify Status SNACK is sent. Alternatively, jump StatSN so far that the normal response never completes, triggering SNACK timer.
+3. **CMDSEQ-08 Gap Detection Threshold** — RESOLVED: Plan 18-02 Task 2 uses tail-loss scenario (second command gets no response) to trigger SNACK timer. Test asserts Status SNACK (Type=1) on wire via pducapture at ERL=1. Does not accept "graceful gap tolerance" as pass.
 
 ## Validation Architecture
 
