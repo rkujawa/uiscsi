@@ -780,6 +780,121 @@ func (mt *MockTarget) HandleDiscovery(targets []login.KeyValue) {
 	})
 }
 
+// HandleSCSIReadMultiPDU registers a handler that responds to SCSI read commands
+// by splitting data into multiple Data-In PDUs of pduSize bytes each.
+// The last PDU carries HasStatus=true (S-bit) and Final=true (F-bit).
+// DataSN increments from 0. BufferOffset tracks cumulative offset.
+// Uses SessionState for correct ExpCmdSN/MaxCmdSN.
+func (mt *MockTarget) HandleSCSIReadMultiPDU(lun uint64, data []byte, pduSize int) {
+	mt.Handle(pdu.OpSCSICommand, func(tc *TargetConn, raw *transport.RawPDU, decoded pdu.PDU) error {
+		cmd := decoded.(*pdu.SCSICommand)
+		expCmdSN, maxCmdSN := mt.session.Update(cmd.CmdSN, cmd.Header.Immediate)
+		edtl := int(cmd.ExpectedDataTransferLength)
+		sendLen := edtl
+		if sendLen > len(data) {
+			sendLen = len(data)
+		}
+
+		var offset, dataSN uint32
+		for int(offset) < sendLen {
+			chunk := pduSize
+			if int(offset)+chunk > sendLen {
+				chunk = sendLen - int(offset)
+			}
+			isFinal := int(offset)+chunk >= sendLen
+
+			din := &pdu.DataIn{
+				Header: pdu.Header{
+					Final:            isFinal,
+					InitiatorTaskTag: cmd.InitiatorTaskTag,
+					DataSegmentLen:   uint32(chunk),
+				},
+				DataSN:       dataSN,
+				BufferOffset: offset,
+				ExpCmdSN:     expCmdSN,
+				MaxCmdSN:     maxCmdSN,
+				Data:         data[offset : offset+uint32(chunk)],
+			}
+			if isFinal {
+				din.HasStatus = true
+				din.Status = 0x00
+				din.StatSN = tc.NextStatSN()
+			}
+			if err := tc.SendPDU(din); err != nil {
+				return err
+			}
+			offset += uint32(chunk)
+			dataSN++
+		}
+		return nil
+	})
+}
+
+// SendR2TSequence sends R2T PDUs for a write command, splitting totalLen into
+// bursts of burstLen bytes. Each R2T gets a unique TTT (starting from baseTTT),
+// incrementing R2TSN, and correct BufferOffset. Returns the TTT values assigned
+// to each R2T for Data-Out verification.
+func SendR2TSequence(tc *TargetConn, itt uint32, startOffset uint32,
+	totalLen uint32, burstLen uint32, baseTTT uint32, session *SessionState) ([]uint32, error) {
+	var ttts []uint32
+	offset := startOffset
+	remaining := totalLen
+	var r2tsn uint32
+	expCmdSN := session.ExpCmdSN()
+	maxCmdSN := uint32(int32(expCmdSN) + 10) // default window
+
+	for remaining > 0 {
+		desired := burstLen
+		if desired > remaining {
+			desired = remaining
+		}
+		ttt := baseTTT + r2tsn
+		r2t := &pdu.R2T{
+			Header: pdu.Header{
+				Final:            true,
+				InitiatorTaskTag: itt,
+			},
+			TargetTransferTag:        ttt,
+			StatSN:                   tc.StatSN(), // R2T does not advance StatSN
+			ExpCmdSN:                 expCmdSN,
+			MaxCmdSN:                 maxCmdSN,
+			R2TSN:                    r2tsn,
+			BufferOffset:             offset,
+			DesiredDataTransferLength: desired,
+		}
+		if err := tc.SendPDU(r2t); err != nil {
+			return ttts, err
+		}
+		ttts = append(ttts, ttt)
+		offset += desired
+		remaining -= desired
+		r2tsn++
+	}
+	return ttts, nil
+}
+
+// ReadDataOutPDUs reads Data-Out PDUs from the initiator until one with F-bit
+// (Final) is received. Returns all received Data-Out PDUs in order.
+// Used by HandleSCSIFunc handlers to collect solicited write data.
+func ReadDataOutPDUs(tc *TargetConn) ([]*pdu.DataOut, error) {
+	var result []*pdu.DataOut
+	for {
+		decoded, _, err := tc.ReadPDU()
+		if err != nil {
+			return result, err
+		}
+		dout, ok := decoded.(*pdu.DataOut)
+		if !ok {
+			// Skip non-DataOut PDUs (e.g., NOP-Out keepalive)
+			continue
+		}
+		result = append(result, dout)
+		if dout.Header.Final {
+			return result, nil
+		}
+	}
+}
+
 // BuildRawPDU marshals a PDU into a RawPDU for wire transmission.
 func BuildRawPDU(p pdu.PDU) (*transport.RawPDU, error) {
 	bhs, err := p.MarshalBHS()
