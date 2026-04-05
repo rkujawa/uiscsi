@@ -13,18 +13,14 @@ import (
 )
 
 // TestRetry_RejectCallerReissue tests the initiator's behavior after receiving
-// a Reject PDU at ERL=1 (CMDSEQ-07 / FFP #4.1).
+// a Reject PDU at ERL=0 (caller-reissue path).
 //
-// FFP #4.1 specifies same-connection retry with original ITT, CDB, CmdSN.
-// However, the production code (recovery.go retryTasks) always allocates new
-// ITT and CmdSN. At ERL=1, a Reject cancels the in-flight task; the caller
-// receives an error and re-issues a new command.
+// At ERL=0, the initiator does not perform same-connection retry. A Reject
+// cancels the in-flight task; the caller receives an error and must re-issue
+// a new command with new ITT and CmdSN.
 //
 // This test verifies: Reject -> task cancelled -> caller re-issues ->
 // new command succeeds with new ITT/CmdSN but same CDB (READ(10) for same LBA).
-//
-// TODO(conformance): Implement same-connection retry with original ITT/CmdSN
-// per RFC 7143 Section 6.2.1 for full FFP #4.1 compliance.
 func TestRetry_RejectCallerReissue(t *testing.T) {
 	rec := &pducapture.Recorder{}
 
@@ -34,20 +30,13 @@ func TestRetry_RejectCallerReissue(t *testing.T) {
 	}
 	t.Cleanup(func() { tgt.Close() })
 
-	// ERL=1 required for SNACK support and Reject handling.
+	// ERL=0: no same-connection retry, Reject cancels task.
 	tgt.SetNegotiationConfig(testutil.NegotiationConfig{
-		ErrorRecoveryLevel: testutil.Uint32Ptr(1),
+		ErrorRecoveryLevel: testutil.Uint32Ptr(0),
 	})
 	tgt.HandleLogin()
 	tgt.HandleLogout()
 	tgt.HandleNOPOut()
-
-	// Register a SNACK handler to drain any SNACK PDUs the initiator sends
-	// (the Status SNACK timer may fire after the task is cancelled).
-	tgt.Handle(pdu.OpSNACKReq, func(tc *testutil.TargetConn, raw *transport.RawPDU, decoded pdu.PDU) error {
-		// Silently consume.
-		return nil
-	})
 
 	tgt.HandleSCSIFunc(func(tc *testutil.TargetConn, cmd *pdu.SCSICommand, callCount int) error {
 		expCmdSN, maxCmdSN := tgt.Session().Update(cmd.CmdSN, cmd.Header.Immediate)
@@ -102,7 +91,7 @@ func TestRetry_RejectCallerReissue(t *testing.T) {
 		uiscsi.WithPDUHook(rec.Hook()),
 		uiscsi.WithKeepaliveInterval(30*time.Second),
 		uiscsi.WithOperationalOverrides(map[string]string{
-			"ErrorRecoveryLevel": "1",
+			"ErrorRecoveryLevel": "0",
 		}),
 	)
 	if err != nil {
@@ -110,10 +99,10 @@ func TestRetry_RejectCallerReissue(t *testing.T) {
 	}
 	t.Cleanup(func() { sess.Close() })
 
-	// First ReadBlocks should fail (Reject cancels the task).
+	// First ReadBlocks should fail (Reject cancels the task at ERL=0).
 	_, firstErr := sess.ReadBlocks(ctx, 0, 0, 1, 512)
 	if firstErr == nil {
-		t.Fatal("expected first ReadBlocks to fail after Reject")
+		t.Fatal("expected first ReadBlocks to fail after Reject at ERL=0")
 	}
 	t.Logf("first ReadBlocks error (expected): %v", firstErr)
 
@@ -161,6 +150,138 @@ func TestRetry_RejectCallerReissue(t *testing.T) {
 		if first.CDB[i] != second.CDB[i] {
 			t.Fatalf("CDB byte %d differs: first=0x%02X, second=0x%02X",
 				i, first.CDB[i], second.CDB[i])
+		}
+	}
+	t.Logf("CDB: identical (both READ(10) for same LBA/block count)")
+}
+
+// TestRetry_SameConnectionRetry tests same-connection retry after Reject at
+// ERL=1 (CMDSEQ-07 / FFP #4.1).
+//
+// Per RFC 7143 Section 6.2.1, when the target rejects a command at ERL>=1,
+// the initiator MUST retry on the same connection with the original ITT,
+// CDB, and CmdSN. This test verifies all three fields are identical on
+// the retried command.
+func TestRetry_SameConnectionRetry(t *testing.T) {
+	rec := &pducapture.Recorder{}
+
+	tgt, err := testutil.NewMockTarget()
+	if err != nil {
+		t.Fatalf("NewMockTarget: %v", err)
+	}
+	t.Cleanup(func() { tgt.Close() })
+
+	// ERL=1 required for same-connection retry.
+	tgt.SetNegotiationConfig(testutil.NegotiationConfig{
+		ErrorRecoveryLevel: testutil.Uint32Ptr(1),
+	})
+	tgt.HandleLogin()
+	tgt.HandleLogout()
+	tgt.HandleNOPOut()
+
+	// Register a SNACK handler to drain any SNACK PDUs.
+	tgt.Handle(pdu.OpSNACKReq, func(tc *testutil.TargetConn, raw *transport.RawPDU, decoded pdu.PDU) error {
+		return nil // silently consume
+	})
+
+	tgt.HandleSCSIFunc(func(tc *testutil.TargetConn, cmd *pdu.SCSICommand, callCount int) error {
+		expCmdSN, maxCmdSN := tgt.Session().Update(cmd.CmdSN, cmd.Header.Immediate)
+
+		if callCount == 0 {
+			// First command: send a Reject PDU (Reason=0x09).
+			rejectedBHS, err := cmd.MarshalBHS()
+			if err != nil {
+				return err
+			}
+			reject := &pdu.Reject{
+				Header: pdu.Header{
+					Final:            true,
+					InitiatorTaskTag: 0xFFFFFFFF,
+					DataSegmentLen:   uint32(len(rejectedBHS)),
+				},
+				Reason:   0x09,
+				StatSN:   tc.NextStatSN(),
+				ExpCmdSN: expCmdSN,
+				MaxCmdSN: maxCmdSN,
+				Data:     rejectedBHS[:],
+			}
+			return tc.SendPDU(reject)
+		}
+
+		// callCount >= 1: respond normally with Data-In (HasStatus=true).
+		data := make([]byte, 512)
+		din := &pdu.DataIn{
+			Header: pdu.Header{
+				Final:            true,
+				InitiatorTaskTag: cmd.InitiatorTaskTag,
+				DataSegmentLen:   512,
+			},
+			DataSN:       0,
+			BufferOffset: 0,
+			HasStatus:    true,
+			Status:       0x00,
+			StatSN:       tc.NextStatSN(),
+			ExpCmdSN:     expCmdSN,
+			MaxCmdSN:     maxCmdSN,
+			Data:         data,
+		}
+		return tc.SendPDU(din)
+	})
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	sess, err := uiscsi.Dial(ctx, tgt.Addr(),
+		uiscsi.WithPDUHook(rec.Hook()),
+		uiscsi.WithKeepaliveInterval(30*time.Second),
+		uiscsi.WithOperationalOverrides(map[string]string{
+			"ErrorRecoveryLevel": "1",
+		}),
+	)
+	if err != nil {
+		t.Fatalf("Dial: %v", err)
+	}
+	t.Cleanup(func() { sess.Close() })
+
+	// ReadBlocks should succeed — the initiator retries internally after Reject.
+	data, err := sess.ReadBlocks(ctx, 0, 0, 1, 512)
+	if err != nil {
+		t.Fatalf("ReadBlocks should succeed after same-connection retry, got: %v", err)
+	}
+	if len(data) != 512 {
+		t.Fatalf("ReadBlocks returned %d bytes, want 512", len(data))
+	}
+
+	// Verify pducapture: exactly 2 SCSI Command PDUs were sent.
+	cmds := rec.Sent(pdu.OpSCSICommand)
+	if len(cmds) < 2 {
+		t.Fatalf("captured SCSI commands: got %d, want >= 2", len(cmds))
+	}
+
+	first := cmds[0].Decoded.(*pdu.SCSICommand)
+	second := cmds[1].Decoded.(*pdu.SCSICommand)
+
+	// Assert ITT[1] == ITT[0] (SAME ITT — same-connection retry).
+	if second.InitiatorTaskTag != first.InitiatorTaskTag {
+		t.Fatalf("ITT changed on retry: first=0x%08X, second=0x%08X (want same)",
+			first.InitiatorTaskTag, second.InitiatorTaskTag)
+	}
+	t.Logf("ITT: first=0x%08X, second=0x%08X (same -- correct)", first.InitiatorTaskTag, second.InitiatorTaskTag)
+
+	// Assert CmdSN[1] == CmdSN[0] (SAME CmdSN — same-connection retry).
+	if second.CmdSN != first.CmdSN {
+		t.Fatalf("CmdSN changed on retry: first=%d, second=%d (want same)",
+			first.CmdSN, second.CmdSN)
+	}
+	t.Logf("CmdSN: first=%d, second=%d (same -- correct)", first.CmdSN, second.CmdSN)
+
+	// Assert CDB identical (same READ(10) command).
+	if len(first.CDB) != len(second.CDB) {
+		t.Fatalf("CDB length mismatch: first=%d, second=%d", len(first.CDB), len(second.CDB))
+	}
+	for i := range first.CDB {
+		if first.CDB[i] != second.CDB[i] {
+			t.Fatalf("CDB byte %d differs: first=0x%02X, second=0x%02X", i, first.CDB[i], second.CDB[i])
 		}
 	}
 	t.Logf("CDB: identical (both READ(10) for same LBA/block count)")

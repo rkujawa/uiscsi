@@ -515,21 +515,33 @@ func TestError_SNACKRejectNewCommand(t *testing.T) {
 	}
 	t.Cleanup(func() { sess.Close() })
 
-	// First ReadBlocks should fail (Reject cancels the task).
-	_, firstErr := sess.ReadBlocks(ctx, 0, 0, 1, 512)
-	if firstErr == nil {
-		t.Fatal("expected first ReadBlocks to fail after Reject")
-	}
-
-	// Allow async processing to settle.
-	time.Sleep(200 * time.Millisecond)
-
-	// Second ReadBlocks should succeed.
-	data, secondErr := sess.ReadBlocks(ctx, 0, 0, 1, 512)
-	if secondErr != nil {
-		t.Fatalf("second ReadBlocks should succeed, got: %v", secondErr)
+	// At ERL>=1, Reject triggers same-connection retry with original ITT/CmdSN
+	// (RFC 7143 Section 6.2.1). The SNACK rejection causes the initiator to
+	// retry the original SCSI command transparently. ReadBlocks should succeed.
+	data, firstErr := sess.ReadBlocks(ctx, 0, 0, 1, 512)
+	if firstErr != nil {
+		t.Fatalf("ReadBlocks should succeed after SNACK Reject + same-connection retry, got: %v", firstErr)
 	}
 	if len(data) != 512 {
-		t.Fatalf("second ReadBlocks returned %d bytes, want 512", len(data))
+		t.Fatalf("ReadBlocks returned %d bytes, want 512", len(data))
+	}
+
+	// Verify pducapture: at least 2 SCSI Command PDUs were sent (original + retry).
+	cmds := rec.Sent(pdu.OpSCSICommand)
+	if len(cmds) < 2 {
+		t.Fatalf("captured SCSI commands: got %d, want >= 2 (original + retry)", len(cmds))
+	}
+
+	first := cmds[0].Decoded.(*pdu.SCSICommand)
+	second := cmds[1].Decoded.(*pdu.SCSICommand)
+
+	// Same-connection retry: ITT and CmdSN must be identical.
+	if second.InitiatorTaskTag != first.InitiatorTaskTag {
+		t.Fatalf("ITT changed on retry: first=0x%08X, second=0x%08X (want same)",
+			first.InitiatorTaskTag, second.InitiatorTaskTag)
+	}
+	if second.CmdSN != first.CmdSN {
+		t.Fatalf("CmdSN changed on retry: first=%d, second=%d (want same)",
+			first.CmdSN, second.CmdSN)
 	}
 }
