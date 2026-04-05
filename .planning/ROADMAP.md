@@ -43,7 +43,7 @@ See [milestones/v1.0-ROADMAP.md](milestones/v1.0-ROADMAP.md) for full phase deta
 - [x] **Phase 15: SCSI Command Write Mode Wire Tests** - ImmediateData/InitialR2T/FirstBurstLength matrix with PDU-level verification (completed 2026-04-05)
 - [x] **Phase 16: Error Injection and SCSI Error Handling** - MockTarget error injection for status codes, sense data, SNACK reject, and DataSN gaps (completed 2026-04-05)
 - [x] **Phase 17: Session Management, NOP-Out, and Async Messages** - Async message injection, NOP-Out variants, and logout wire validation (completed 2026-04-05)
-- [ ] **Phase 18: Command Window, Retry, and ERL 2** - Command window enforcement, command retry wire validation, and ERL 2 connection reassignment
+- [x] **Phase 18: Command Window, Retry, and ERL 2** - Command window enforcement, command retry wire validation, and ERL 2 connection reassignment (completed 2026-04-05)
 - [ ] **Phase 19: Task Management and Text Negotiation** - TMF field validation, Abort Task Set behavior, and Text Request wire tests
 
 ## Phase Details
@@ -137,7 +137,7 @@ Plans:
 - [x] 18-01-PLAN.md — Command window conformance tests (CMDSEQ-04, CMDSEQ-05, CMDSEQ-06, CMDSEQ-09)
 - [x] 18-02-PLAN.md — Command retry and ExpStatSN gap tests (CMDSEQ-07, CMDSEQ-08)
 - [x] 18-03-PLAN.md — ERL 2 dispatch fix + connection reassignment and task reassign tests (SESS-07, SESS-08)
-- [ ] 18-04-PLAN.md — Gap closure: same-connection retry with original ITT/CDB/CmdSN (CMDSEQ-07)
+- [x] 18-04-PLAN.md — Gap closure: same-connection retry with original ITT/CDB/CmdSN (CMDSEQ-07)
 
 ### Phase 19: Task Management and Text Negotiation
 **Goal**: TMF PDU fields are verified at wire level and Text Request negotiation covers all advanced features
@@ -174,5 +174,5 @@ Phases execute in numeric order: 13 -> 14 -> 15 -> 16 -> 17 -> 18 -> 19
 | 15. SCSI Write Mode | v1.1 | 2/2 | Complete    | 2026-04-05 |
 | 16. Error Injection + SNACK | v1.1 | 2/2 | Complete   | 2026-04-05 |
 | 17. Session Mgmt + Async | v1.1 | 3/3 | Complete   | 2026-04-05 |
-| 18. Cmd Window + ERL 2 | v1.1 | 3/4 | Gap closure | - |
+| 18. Cmd Window + ERL 2 | v1.1 | 4/4 | Complete    | 2026-04-05 |
 | 19. TMF + Text | v1.1 | 0/0 | Not started | - |
