@@ -765,6 +765,40 @@ func (mt *MockTarget) HandleSCSIError(status uint8, senseData []byte) {
 	})
 }
 
+// HandleSCSIWithStatus registers a SCSI command handler that always returns
+// the specified status with optional sense data. Unlike HandleSCSIError, this
+// method uses SessionState.Update for correct CmdSN tracking.
+func (mt *MockTarget) HandleSCSIWithStatus(status uint8, senseData []byte) {
+	mt.Handle(pdu.OpSCSICommand, func(tc *TargetConn, raw *transport.RawPDU, decoded pdu.PDU) error {
+		cmd := decoded.(*pdu.SCSICommand)
+		statSN := tc.NextStatSN()
+		expCmdSN, maxCmdSN := mt.session.Update(cmd.CmdSN, cmd.Header.Immediate)
+
+		resp := &pdu.SCSIResponse{
+			Header: pdu.Header{
+				Final:            true,
+				InitiatorTaskTag: cmd.InitiatorTaskTag,
+			},
+			Status:   status,
+			StatSN:   statSN,
+			ExpCmdSN: expCmdSN,
+			MaxCmdSN: maxCmdSN,
+		}
+
+		if len(senseData) > 0 {
+			// Per RFC 7143 Section 11.4.7.2, the SCSI Response data segment
+			// is [SenseLength (2 bytes, big-endian)] [Sense Data].
+			dataSegment := make([]byte, 2+len(senseData))
+			binary.BigEndian.PutUint16(dataSegment[0:2], uint16(len(senseData)))
+			copy(dataSegment[2:], senseData)
+			resp.Header.DataSegmentLen = uint32(len(dataSegment))
+			resp.Data = dataSegment
+		}
+
+		return tc.SendPDU(resp)
+	})
+}
+
 // HandleDiscovery registers a TextReq handler that responds with
 // SendTargets discovery data. Used by Discover() tests.
 func (mt *MockTarget) HandleDiscovery(targets []login.KeyValue) {
