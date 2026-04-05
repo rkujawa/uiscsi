@@ -180,6 +180,153 @@ func TestNOPOut_PingResponse(t *testing.T) {
 	}
 }
 
+// TestNOPOut_ExpStatSNConfirmation verifies that the initiator can send a
+// NOP-Out ExpStatSN confirmation with ITT=0xFFFFFFFF, TTT=0xFFFFFFFF,
+// Immediate=true, Final=true, and CmdSN not advanced.
+// Per RFC 7143 Section 11.18 and FFP #15.3.
+// Conformance: SESS-05
+func TestNOPOut_ExpStatSNConfirmation(t *testing.T) {
+	rec := &pducapture.Recorder{}
+
+	tgt, err := testutil.NewMockTarget()
+	if err != nil {
+		t.Fatalf("NewMockTarget: %v", err)
+	}
+	t.Cleanup(func() { tgt.Close() })
+
+	tgt.HandleLogin()
+	tgt.HandleLogout()
+
+	// Custom NOP-Out handler with SessionState for correct sequencing.
+	tgt.Handle(pdu.OpNOPOut, func(tc *testutil.TargetConn, raw *transport.RawPDU, decoded pdu.PDU) error {
+		req := decoded.(*pdu.NOPOut)
+		// ExpStatSN confirmation has ITT=0xFFFFFFFF — no response expected.
+		// Only respond to pings (ITT != 0xFFFFFFFF).
+		if req.Header.InitiatorTaskTag == 0xFFFFFFFF {
+			return nil
+		}
+		expCmdSN, maxCmdSN := tgt.Session().Update(req.CmdSN, req.Header.Immediate)
+		resp := &pdu.NOPIn{
+			Header: pdu.Header{
+				Final:            true,
+				InitiatorTaskTag: req.Header.InitiatorTaskTag,
+			},
+			TargetTransferTag: 0xFFFFFFFF,
+			StatSN:            tc.NextStatSN(),
+			ExpCmdSN:          expCmdSN,
+			MaxCmdSN:          maxCmdSN,
+		}
+		return tc.SendPDU(resp)
+	})
+
+	// HandleSCSIFunc: standard response for TestUnitReady.
+	tgt.HandleSCSIFunc(func(tc *testutil.TargetConn, cmd *pdu.SCSICommand, callCount int) error {
+		expCmdSN, maxCmdSN := tgt.Session().Update(cmd.CmdSN, cmd.Header.Immediate)
+		resp := &pdu.SCSIResponse{
+			Header: pdu.Header{
+				Final:            true,
+				InitiatorTaskTag: cmd.InitiatorTaskTag,
+			},
+			Status:   0x00,
+			StatSN:   tc.NextStatSN(),
+			ExpCmdSN: expCmdSN,
+			MaxCmdSN: maxCmdSN,
+		}
+		return tc.SendPDU(resp)
+	})
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	sess, err := uiscsi.Dial(ctx, tgt.Addr(),
+		uiscsi.WithPDUHook(rec.Hook()),
+		uiscsi.WithKeepaliveInterval(30*time.Second), // long, to avoid auto pings
+	)
+	if err != nil {
+		t.Fatalf("Dial: %v", err)
+	}
+	t.Cleanup(func() { sess.Close() })
+
+	// Send a SCSI command first to establish CmdSN baseline.
+	if err := sess.TestUnitReady(ctx, 0); err != nil {
+		t.Fatalf("TestUnitReady: %v", err)
+	}
+
+	// Record CmdSN of the SCSI command before confirmation.
+	cmdsBeforeConfirm := rec.Sent(pdu.OpSCSICommand)
+	if len(cmdsBeforeConfirm) == 0 {
+		t.Fatal("no SCSI commands captured before confirmation")
+	}
+	cmdSNBefore := cmdsBeforeConfirm[len(cmdsBeforeConfirm)-1].Decoded.(*pdu.SCSICommand).CmdSN
+
+	// Trigger ExpStatSN confirmation.
+	if err := sess.SendExpStatSNConfirmation(); err != nil {
+		t.Fatalf("SendExpStatSNConfirmation: %v", err)
+	}
+
+	// Allow time for NOP-Out to propagate.
+	time.Sleep(200 * time.Millisecond)
+
+	// Send another SCSI command to verify CmdSN was NOT advanced by the NOP-Out.
+	if err := sess.TestUnitReady(ctx, 0); err != nil {
+		t.Fatalf("TestUnitReady[1]: %v", err)
+	}
+
+	// Find the NOP-Out with ITT=0xFFFFFFFF AND TTT=0xFFFFFFFF.
+	nopouts := rec.Sent(pdu.OpNOPOut)
+	var found *pdu.NOPOut
+	for _, cap := range nopouts {
+		nop := cap.Decoded.(*pdu.NOPOut)
+		if nop.Header.InitiatorTaskTag == 0xFFFFFFFF && nop.TargetTransferTag == 0xFFFFFFFF {
+			found = nop
+			break
+		}
+	}
+	if found == nil {
+		t.Fatalf("no ExpStatSN confirmation NOP-Out found (ITT=TTT=0xFFFFFFFF); captured %d NOP-Outs", len(nopouts))
+	}
+
+	// Verify all wire fields per FFP #15.3.
+
+	// I-bit = true (Immediate)
+	if !found.Header.Immediate {
+		t.Error("Immediate: got false, want true")
+	}
+
+	// F-bit = true (Final)
+	if !found.Header.Final {
+		t.Error("Final: got false, want true")
+	}
+
+	// ITT = 0xFFFFFFFF (no response expected)
+	if found.Header.InitiatorTaskTag != 0xFFFFFFFF {
+		t.Errorf("ITT: got 0x%08X, want 0xFFFFFFFF", found.Header.InitiatorTaskTag)
+	}
+
+	// TTT = 0xFFFFFFFF
+	if found.TargetTransferTag != 0xFFFFFFFF {
+		t.Errorf("TTT: got 0x%08X, want 0xFFFFFFFF", found.TargetTransferTag)
+	}
+
+	// ExpStatSN present (non-zero).
+	if found.ExpStatSN == 0 {
+		t.Error("ExpStatSN: got 0, want non-zero")
+	}
+
+	// CmdSN should NOT be advanced — next SCSI command CmdSN should be
+	// exactly cmdSNBefore+1 (not cmdSNBefore+2).
+	cmdsAfterConfirm := rec.Sent(pdu.OpSCSICommand)
+	if len(cmdsAfterConfirm) < 2 {
+		t.Fatalf("captured SCSI commands: got %d, want >= 2", len(cmdsAfterConfirm))
+	}
+	cmdSNAfter := cmdsAfterConfirm[len(cmdsAfterConfirm)-1].Decoded.(*pdu.SCSICommand).CmdSN
+	delta := cmdSNAfter - cmdSNBefore
+	if delta != 1 {
+		t.Errorf("CmdSN gap after ExpStatSN confirmation: before=%d, after=%d, delta=%d, want 1",
+			cmdSNBefore, cmdSNAfter, delta)
+	}
+}
+
 // TestNOPOut_PingRequest verifies that the initiator sends keepalive NOP-Out
 // pings with correct wire fields when keepalive interval triggers.
 // Conformance: SESS-04 (FFP #15.2)

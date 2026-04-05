@@ -244,6 +244,21 @@ func (s *Session) PersistReserveOut(ctx context.Context, lun uint64, serviceActi
 	return err
 }
 
+// Logout performs a graceful session logout. It waits for in-flight
+// commands to complete, then exchanges Logout/LogoutResp PDUs with the
+// target before shutting down. Per RFC 7143 Section 11.14.
+func (s *Session) Logout(ctx context.Context) error {
+	return s.s.Logout(ctx)
+}
+
+// SendExpStatSNConfirmation sends a NOP-Out that confirms ExpStatSN to the
+// target without expecting a response. Per RFC 7143 Section 11.18:
+// ITT=0xFFFFFFFF (no response), TTT=0xFFFFFFFF, Immediate=true.
+// CmdSN is carried but NOT advanced.
+func (s *Session) SendExpStatSNConfirmation() error {
+	return s.s.SendExpStatSNConfirmation()
+}
+
 // Task Management Functions
 
 // AbortTask aborts a single task identified by its initiator task tag.
