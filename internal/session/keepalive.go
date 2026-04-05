@@ -122,6 +122,7 @@ func (s *Session) handleUnsolicitedNOPIn(raw *transport.RawPDU) {
 				Immediate:        true,
 				Final:            true,
 				InitiatorTaskTag: 0xFFFFFFFF, // response, not new task
+				LUN:              nopin.Header.LUN, // Echo LUN from NOP-In per RFC 7143 S11.18
 			},
 			TargetTransferTag: nopin.TargetTransferTag,
 			CmdSN:             s.window.current(),
@@ -151,5 +152,34 @@ func (s *Session) handleUnsolicitedNOPIn(raw *transport.RawPDU) {
 		default:
 			s.cfg.logger.Warn("session: write channel full, dropping NOP-Out response")
 		}
+	}
+}
+
+// SendExpStatSNConfirmation sends a NOP-Out that confirms ExpStatSN to the
+// target without expecting a response. Per RFC 7143 Section 11.18:
+// ITT=0xFFFFFFFF (no response), TTT=0xFFFFFFFF, Immediate=true.
+// CmdSN is carried but NOT advanced.
+func (s *Session) SendExpStatSNConfirmation() error {
+	nopOut := &pdu.NOPOut{
+		Header: pdu.Header{
+			Immediate:        true,
+			Final:            true,
+			InitiatorTaskTag: 0xFFFFFFFF,
+		},
+		TargetTransferTag: 0xFFFFFFFF,
+		CmdSN:             s.window.current(),
+		ExpStatSN:         s.getExpStatSN(),
+	}
+	bhs, err := nopOut.MarshalBHS()
+	if err != nil {
+		return fmt.Errorf("encode ExpStatSN NOP-Out: %w", err)
+	}
+	raw := &transport.RawPDU{BHS: bhs}
+	s.stampDigests(raw)
+	select {
+	case s.writeCh <- raw:
+		return nil
+	default:
+		return fmt.Errorf("write channel full")
 	}
 }

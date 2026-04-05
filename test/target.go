@@ -150,6 +150,39 @@ func boolToYesNo(v bool) string {
 // Uint32Ptr returns a pointer to the given uint32 value. Used in NegotiationConfig.
 func Uint32Ptr(v uint32) *uint32 { return &v }
 
+// AsyncParams carries optional fields for SendAsyncMsg.
+type AsyncParams struct {
+	Parameter1 uint16
+	Parameter2 uint16
+	Parameter3 uint16
+	AsyncVCode uint8
+	SenseData  []byte // for event code 0
+}
+
+// SendAsyncMsg sends an AsyncMsg PDU to the initiator via the given TargetConn.
+// event is the AsyncEvent code (0-4, 255). params carries event-specific fields.
+// Uses SessionState for correct ExpCmdSN/MaxCmdSN sequence numbers.
+func (mt *MockTarget) SendAsyncMsg(tc *TargetConn, event uint8, params AsyncParams) error {
+	async := &pdu.AsyncMsg{
+		Header: pdu.Header{
+			Final: true,
+		},
+		StatSN:     tc.NextStatSN(),
+		ExpCmdSN:   mt.session.ExpCmdSN(),
+		MaxCmdSN:   uint32(int32(mt.session.ExpCmdSN()) + 10),
+		AsyncEvent: event,
+		AsyncVCode: params.AsyncVCode,
+		Parameter1: params.Parameter1,
+		Parameter2: params.Parameter2,
+		Parameter3: params.Parameter3,
+	}
+	if len(params.SenseData) > 0 {
+		async.Data = params.SenseData
+		async.Header.DataSegmentLen = uint32(len(params.SenseData))
+	}
+	return tc.SendPDU(async)
+}
+
 // MockTarget is an in-process iSCSI target for testing.
 // It listens on a local TCP port, accepts connections, and dispatches
 // received PDUs to registered handlers by opcode.
@@ -514,6 +547,28 @@ func (mt *MockTarget) HandleLogin() {
 			return tc.SendPDU(resp)
 		}
 		return nil
+	})
+}
+
+// HandleText registers a handler for Text Request PDUs that echoes back
+// the received key-value pairs as accepted. Used for renegotiation tests.
+func (mt *MockTarget) HandleText() {
+	mt.Handle(pdu.OpTextReq, func(tc *TargetConn, raw *transport.RawPDU, decoded pdu.PDU) error {
+		req := decoded.(*pdu.TextReq)
+		expCmdSN, maxCmdSN := mt.session.Update(req.CmdSN, req.Header.Immediate)
+		resp := &pdu.TextResp{
+			Header: pdu.Header{
+				Final:            true,
+				InitiatorTaskTag: req.Header.InitiatorTaskTag,
+				DataSegmentLen:   req.Header.DataSegmentLen,
+			},
+			TargetTransferTag: 0xFFFFFFFF,
+			StatSN:            tc.NextStatSN(),
+			ExpCmdSN:          expCmdSN,
+			MaxCmdSN:          maxCmdSN,
+			Data:              req.Data, // echo parameters as accepted
+		}
+		return tc.SendPDU(resp)
 	})
 }
 

@@ -3,8 +3,10 @@ package session
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"time"
 
+	"github.com/rkujawa/uiscsi/internal/login"
 	"github.com/rkujawa/uiscsi/internal/pdu"
 	"github.com/rkujawa/uiscsi/internal/transport"
 )
@@ -64,8 +66,19 @@ func (s *Session) handleAsyncMsg(raw *transport.RawPDU) {
 		s.cancel()
 
 	case 4:
-		// Negotiation request (renegotiation is Phase 6+).
+		// Negotiation request: renegotiate within Parameter3 seconds.
 		s.dispatchAsyncEvent(evt)
+		go func() {
+			deadline := time.Duration(async.Parameter3) * time.Second
+			if deadline <= 0 {
+				deadline = 30 * time.Second
+			}
+			ctx, cancel := context.WithTimeout(context.Background(), deadline)
+			defer cancel()
+			if err := s.renegotiate(ctx); err != nil {
+				s.cfg.logger.Warn("session: renegotiation failed", "error", err)
+			}
+		}()
 
 	default:
 		// Vendor-specific (255) and all others.
@@ -85,22 +98,126 @@ func (s *Session) dispatchAsyncEvent(evt AsyncEvent) {
 }
 
 // handleTargetRequestedLogout handles an AsyncMsg with EventCode 1 (target
-// requests logout). Per RFC 7143, the initiator should wait DefaultTime2Wait
-// seconds before initiating logout.
+// requests logout). Per RFC 7143 S11.9.1 and FFP #14.1, the initiator MUST
+// logout within Parameter3 seconds. DefaultTime2Wait is the delay before
+// logout CAN start, used only if it fits within the deadline.
 func (s *Session) handleTargetRequestedLogout(evt AsyncEvent) {
+	// Parameter3 = seconds by which logout MUST complete (RFC 7143 S11.9.1).
+	deadline := time.Duration(evt.Parameter3) * time.Second
+	if deadline <= 0 {
+		deadline = 30 * time.Second // fallback
+	}
+
+	// DefaultTime2Wait is the delay before logout CAN start.
+	// Only wait if it fits within the deadline.
 	waitDuration := time.Duration(s.params.DefaultTime2Wait) * time.Second
-	if waitDuration > 0 {
+	if waitDuration > 0 && waitDuration < deadline {
 		time.Sleep(waitDuration)
 	}
 
-	// Initiate logout with reason 0 (close session).
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), deadline)
 	defer cancel()
 
 	if err := s.logout(ctx, 0); err != nil {
 		s.cfg.logger.Warn("session: target-requested logout failed", "error", err)
 	}
-
-	// Close session after logout.
 	s.Close()
+}
+
+// renegotiate initiates a Text Request exchange to renegotiate operational
+// parameters after receiving AsyncEvent code 4. Per RFC 7143 Section 11.9,
+// the initiator MUST send a Text Request within Parameter3 seconds.
+func (s *Session) renegotiate(ctx context.Context) error {
+	data := login.EncodeTextKV([]login.KeyValue{
+		{Key: "MaxRecvDataSegmentLength", Value: strconv.Itoa(int(s.params.MaxRecvDataSegmentLength))},
+		{Key: "MaxBurstLength", Value: strconv.Itoa(int(s.params.MaxBurstLength))},
+		{Key: "FirstBurstLength", Value: strconv.Itoa(int(s.params.FirstBurstLength))},
+	})
+
+	cmdSN, err := s.window.acquire(ctx)
+	if err != nil {
+		return fmt.Errorf("renegotiate: acquire CmdSN: %w", err)
+	}
+
+	itt, respCh := s.router.Register()
+	textReq := &pdu.TextReq{
+		Header: pdu.Header{
+			Final:            true,
+			InitiatorTaskTag: itt,
+			DataSegmentLen:   uint32(len(data)),
+		},
+		TargetTransferTag: 0xFFFFFFFF,
+		CmdSN:             cmdSN,
+		ExpStatSN:         s.getExpStatSN(),
+		Data:              data,
+	}
+
+	bhs, err := textReq.MarshalBHS()
+	if err != nil {
+		s.router.Unregister(itt)
+		return fmt.Errorf("renegotiate: encode TextReq: %w", err)
+	}
+
+	raw := &transport.RawPDU{BHS: bhs}
+	if len(data) > 0 {
+		raw.DataSegment = data
+	}
+	s.stampDigests(raw)
+
+	select {
+	case s.writeCh <- raw:
+	case <-ctx.Done():
+		s.router.Unregister(itt)
+		return ctx.Err()
+	}
+
+	// Wait for TextResp.
+	timer := time.NewTimer(30 * time.Second)
+	defer timer.Stop()
+
+	select {
+	case respRaw := <-respCh:
+		decoded, decErr := pdu.DecodeBHS(respRaw.BHS)
+		if decErr != nil {
+			return fmt.Errorf("renegotiate: decode TextResp: %w", decErr)
+		}
+		textResp, ok := decoded.(*pdu.TextResp)
+		if !ok {
+			return fmt.Errorf("renegotiate: unexpected PDU type %T", decoded)
+		}
+		s.window.update(textResp.ExpCmdSN, textResp.MaxCmdSN)
+		s.updateStatSN(textResp.StatSN)
+		// Parse accepted parameters and update session params if needed.
+		if len(respRaw.DataSegment) > 0 {
+			kvs := login.DecodeTextKV(respRaw.DataSegment)
+			s.applyRenegotiatedParams(kvs)
+		}
+		return nil
+	case <-timer.C:
+		s.router.Unregister(itt)
+		return fmt.Errorf("renegotiate: TextResp timeout")
+	case <-ctx.Done():
+		s.router.Unregister(itt)
+		return ctx.Err()
+	}
+}
+
+// applyRenegotiatedParams updates session parameters from TextResp key-values.
+func (s *Session) applyRenegotiatedParams(kvs []login.KeyValue) {
+	for _, kv := range kvs {
+		switch kv.Key {
+		case "MaxRecvDataSegmentLength":
+			if v, err := strconv.ParseUint(kv.Value, 10, 32); err == nil {
+				s.params.MaxRecvDataSegmentLength = uint32(v)
+			}
+		case "MaxBurstLength":
+			if v, err := strconv.ParseUint(kv.Value, 10, 32); err == nil {
+				s.params.MaxBurstLength = uint32(v)
+			}
+		case "FirstBurstLength":
+			if v, err := strconv.ParseUint(kv.Value, 10, 32); err == nil {
+				s.params.FirstBurstLength = uint32(v)
+			}
+		}
+	}
 }
