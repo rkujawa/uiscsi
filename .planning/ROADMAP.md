@@ -44,7 +44,7 @@ See [milestones/v1.0-ROADMAP.md](milestones/v1.0-ROADMAP.md) for full phase deta
 - [x] **Phase 16: Error Injection and SCSI Error Handling** - MockTarget error injection for status codes, sense data, SNACK reject, and DataSN gaps (completed 2026-04-05)
 - [x] **Phase 17: Session Management, NOP-Out, and Async Messages** - Async message injection, NOP-Out variants, and logout wire validation (completed 2026-04-05)
 - [x] **Phase 18: Command Window, Retry, and ERL 2** - Command window enforcement, command retry wire validation, and ERL 2 connection reassignment (completed 2026-04-05)
-- [ ] **Phase 19: Task Management and Text Negotiation** - TMF field validation, Abort Task Set behavior, and Text Request wire tests
+- [x] **Phase 19: Task Management and Text Negotiation** - TMF field validation, Abort Task Set behavior, and Text Request wire tests (completed 2026-04-05)
 
 ## Phase Details
 
@@ -149,8 +149,8 @@ Plans:
   3. Tests verify Text Request fields, ITT uniqueness across requests, initial TTT=0xFFFFFFFF, TTT continuation echo, other parameters, and negotiation reset behavior
 **Plans**: 2 plans
 Plans:
-- [ ] 19-01-PLAN.md — TMF wire conformance tests (TMF-01, TMF-02, TMF-03, TMF-04, TMF-05, TMF-06)
-- [ ] 19-02-PLAN.md — Text Request wire conformance tests (TEXT-01, TEXT-02, TEXT-03, TEXT-04, TEXT-05, TEXT-06)
+- [x] 19-01-PLAN.md — TMF wire conformance tests (TMF-01, TMF-02, TMF-03, TMF-04, TMF-05, TMF-06)
+- [x] 19-02-PLAN.md — Text Request wire conformance tests (TEXT-01, TEXT-02, TEXT-03, TEXT-04, TEXT-05, TEXT-06)
 
 ## Progress
 
@@ -178,4 +178,4 @@ Phases execute in numeric order: 13 -> 14 -> 15 -> 16 -> 17 -> 18 -> 19
 | 16. Error Injection + SNACK | v1.1 | 2/2 | Complete   | 2026-04-05 |
 | 17. Session Mgmt + Async | v1.1 | 3/3 | Complete   | 2026-04-05 |
 | 18. Cmd Window + ERL 2 | v1.1 | 4/4 | Complete    | 2026-04-05 |
-| 19. TMF + Text | v1.1 | 0/2 | Not started | - |
+| 19. TMF + Text | v1.1 | 2/2 | Complete    | 2026-04-05 |
