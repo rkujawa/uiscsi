@@ -117,6 +117,9 @@ type SenseInfo struct {
 	ASC         uint8
 	ASCQ        uint8
 	Description string
+	Filemark    bool
+	EOM         bool
+	ILI         bool
 }
 
 // TMFResult carries a task management function outcome.
@@ -217,6 +220,9 @@ func convertSense(sd *scsi.SenseData) *SenseInfo {
 		ASC:         sd.ASC,
 		ASCQ:        sd.ASCQ,
 		Description: sd.String(),
+		Filemark:    sd.Filemark,
+		EOM:         sd.EOM,
+		ILI:         sd.ILI,
 	}
 }
 

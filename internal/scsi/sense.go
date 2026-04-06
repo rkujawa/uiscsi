@@ -14,6 +14,9 @@ type SenseData struct {
 	ASCQ         uint8
 	Information  uint32
 	Valid        bool
+	Filemark     bool
+	EOM          bool
+	ILI          bool
 	Raw          []byte
 }
 
@@ -47,6 +50,9 @@ func ParseSense(data []byte) (*SenseData, error) {
 			return nil, fmt.Errorf("scsi: fixed-format sense data too short (%d bytes, need 18)", len(data))
 		}
 		sd.Valid = data[0]&0x80 != 0
+		sd.Filemark = data[2]&0x80 != 0
+		sd.EOM = data[2]&0x40 != 0
+		sd.ILI = data[2]&0x20 != 0
 		sd.Key = SenseKey(data[2] & 0x0F)
 		sd.Information = binary.BigEndian.Uint32(data[3:7])
 		sd.ASC = data[12]
@@ -81,6 +87,10 @@ func ascLookup(asc, ascq uint8) string {
 // Common codes per SPC-4 Annex D.
 var ascTable = map[uint16]string{
 	0x0000: "No additional sense information",
+	0x0001: "Filemark detected",
+	0x0002: "End-of-partition/medium detected",
+	0x0004: "Beginning-of-partition/medium detected",
+	0x0005: "End-of-data detected",
 	0x0100: "No index/sector signal",
 	0x0200: "No seek complete",
 	0x0300: "Peripheral device write fault",
@@ -139,12 +149,14 @@ var ascTable = map[uint16]string{
 	0x2C00: "Command sequence error",
 	0x2F00: "Commands cleared by another initiator",
 	0x3000: "Incompatible medium installed",
+	0x3003: "Cleaning cartridge installed",
 	0x3100: "Medium format corrupted",
 	0x3200: "No defect spare location available",
 	0x3500: "Enclosure failure",
 	0x3700: "Rounded parameter",
 	0x3900: "Saving parameters not supported",
 	0x3A00: "Medium not present",
+	0x3B00: "Sequential positioning error",
 	0x3D00: "Invalid bits in identify message",
 	0x3E00: "Logical unit has not self-configured yet",
 	0x3F00: "Target operating conditions have changed",

@@ -173,6 +173,150 @@ func TestParseSense(t *testing.T) {
 	}
 }
 
+func TestParseSenseFilemarkEOMILI(t *testing.T) {
+	tests := []struct {
+		name         string
+		data         []byte
+		wantFilemark bool
+		wantEOM      bool
+		wantILI      bool
+		wantKey      SenseKey
+	}{
+		{
+			name: "filemark set with MEDIUM_ERROR",
+			data: []byte{
+				0xF0,                         // valid=1, response code=0x70
+				0x00,                         // segment number
+				0x83,                         // filemark=1, EOM=0, ILI=0, key=MEDIUM ERROR
+				0x00, 0x00, 0x00, 0x00,       // information
+				0x0A,                         // additional sense length
+				0x00, 0x00, 0x00, 0x00,       // command-specific info
+				0x00, 0x00,                   // ASC/ASCQ
+				0x00,                         // FRU
+				0x00, 0x00, 0x00,             // sense key specific
+			},
+			wantFilemark: true,
+			wantEOM:      false,
+			wantILI:      false,
+			wantKey:      SenseMediumError,
+		},
+		{
+			name: "EOM set",
+			data: []byte{
+				0xF0, 0x00,
+				0x40, // EOM=1, filemark=0, ILI=0, key=NO SENSE
+				0x00, 0x00, 0x00, 0x00,
+				0x0A,
+				0x00, 0x00, 0x00, 0x00,
+				0x00, 0x00,
+				0x00,
+				0x00, 0x00, 0x00,
+			},
+			wantFilemark: false,
+			wantEOM:      true,
+			wantILI:      false,
+			wantKey:      SenseNoSense,
+		},
+		{
+			name: "ILI set",
+			data: []byte{
+				0xF0, 0x00,
+				0x20, // ILI=1, filemark=0, EOM=0, key=NO SENSE
+				0x00, 0x00, 0x00, 0x00,
+				0x0A,
+				0x00, 0x00, 0x00, 0x00,
+				0x00, 0x00,
+				0x00,
+				0x00, 0x00, 0x00,
+			},
+			wantFilemark: false,
+			wantEOM:      false,
+			wantILI:      true,
+			wantKey:      SenseNoSense,
+		},
+		{
+			name: "all three set",
+			data: []byte{
+				0xF0, 0x00,
+				0xE0, // filemark=1, EOM=1, ILI=1, key=NO SENSE
+				0x00, 0x00, 0x00, 0x00,
+				0x0A,
+				0x00, 0x00, 0x00, 0x00,
+				0x00, 0x00,
+				0x00,
+				0x00, 0x00, 0x00,
+			},
+			wantFilemark: true,
+			wantEOM:      true,
+			wantILI:      true,
+			wantKey:      SenseNoSense,
+		},
+		{
+			name: "none set with MEDIUM_ERROR",
+			data: []byte{
+				0xF0, 0x00,
+				0x03, // filemark=0, EOM=0, ILI=0, key=MEDIUM ERROR
+				0x00, 0x00, 0x00, 0x00,
+				0x0A,
+				0x00, 0x00, 0x00, 0x00,
+				0x00, 0x00,
+				0x00,
+				0x00, 0x00, 0x00,
+			},
+			wantFilemark: false,
+			wantEOM:      false,
+			wantILI:      false,
+			wantKey:      SenseMediumError,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			sd, err := ParseSense(tt.data)
+			if err != nil {
+				t.Fatalf("ParseSense() unexpected error: %v", err)
+			}
+			if sd.Filemark != tt.wantFilemark {
+				t.Errorf("Filemark = %v, want %v", sd.Filemark, tt.wantFilemark)
+			}
+			if sd.EOM != tt.wantEOM {
+				t.Errorf("EOM = %v, want %v", sd.EOM, tt.wantEOM)
+			}
+			if sd.ILI != tt.wantILI {
+				t.Errorf("ILI = %v, want %v", sd.ILI, tt.wantILI)
+			}
+			if sd.Key != tt.wantKey {
+				t.Errorf("Key = %v, want %v", sd.Key, tt.wantKey)
+			}
+		})
+	}
+}
+
+func TestAscLookupTapeCodes(t *testing.T) {
+	tests := []struct {
+		asc  uint8
+		ascq uint8
+		want string
+	}{
+		{0x00, 0x01, "Filemark detected"},
+		{0x00, 0x02, "End-of-partition/medium detected"},
+		{0x00, 0x04, "Beginning-of-partition/medium detected"},
+		{0x00, 0x05, "End-of-data detected"},
+		{0x30, 0x03, "Cleaning cartridge installed"},
+		{0x3B, 0x00, "Sequential positioning error"},
+	}
+
+	for _, tt := range tests {
+		name := fmt.Sprintf("ASC=0x%02X_ASCQ=0x%02X", tt.asc, tt.ascq)
+		t.Run(name, func(t *testing.T) {
+			got := ascLookup(tt.asc, tt.ascq)
+			if got != tt.want {
+				t.Errorf("ascLookup(0x%02X, 0x%02X) = %q, want %q", tt.asc, tt.ascq, got, tt.want)
+			}
+		})
+	}
+}
+
 func TestSenseDataString(t *testing.T) {
 	tests := []struct {
 		name    string
