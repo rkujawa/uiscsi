@@ -218,6 +218,15 @@ func (s *Session) reconnect(cause error) {
 // Write tasks with non-seekable readers fail with ErrRetryNotPossible.
 func (s *Session) retryTasks(ctx context.Context, tasks map[uint32]*task) {
 	for _, tk := range tasks {
+		// Streaming tasks cannot be retried: the caller already holds the
+		// chanReader from the original submission. The reader cannot be
+		// replaced after reconnection. This is correct for sequential
+		// devices (tape) — you cannot resume a tape read mid-stream.
+		if tk.streaming {
+			tk.cancel(fmt.Errorf("session: streaming task not retriable after reconnect"))
+			continue
+		}
+
 		// For write tasks, check if Reader is seekable.
 		if tk.isWrite && tk.reader != nil {
 			if seeker, ok := tk.reader.(io.Seeker); ok {

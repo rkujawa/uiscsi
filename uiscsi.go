@@ -11,6 +11,20 @@
 //	defer sess.Close()
 //
 //	data, err := sess.ReadBlocks(ctx, 0, 0, 1, 512)
+//
+// # Streaming I/O
+//
+// For high-throughput sequential devices (tape drives, etc.),
+// [Session.StreamExecute] provides bounded-memory streaming of arbitrary
+// SCSI commands. Unlike [Session.Execute] which buffers the entire
+// response into []byte, StreamExecute returns an [io.Reader] that
+// delivers data as PDUs arrive with ~64KB peak memory regardless of
+// transfer size.
+//
+//	sr, err := sess.StreamExecute(ctx, lun, cdb, uiscsi.WithDataIn(blockSize))
+//	if err != nil { ... }
+//	_, err = io.Copy(dst, sr.Data)
+//	status, sense, err := sr.Wait()
 package uiscsi
 
 import (

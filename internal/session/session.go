@@ -246,6 +246,135 @@ func (s *Session) Submit(ctx context.Context, cmd Command) (<-chan Result, error
 	return tk.resultCh, nil
 }
 
+// SubmitStreaming is like Submit but creates a streaming task for read
+// commands. Data flows through a bounded-memory chanReader as Data-In
+// PDUs arrive, keeping memory usage constant regardless of transfer size.
+//
+// Returns both the result channel (for final status/sense) and an
+// io.Reader (for streaming data). The caller must read from the
+// io.Reader concurrently with (or before) receiving from the result
+// channel. The result channel delivers the final status when the command
+// completes; Result.Data is nil for streaming submissions since data is
+// delivered via the returned io.Reader.
+//
+// Streaming tasks are not retriable after ERL 0 reconnection because the
+// caller already holds the io.Reader from the original submission.
+func (s *Session) SubmitStreaming(ctx context.Context, cmd Command) (<-chan Result, io.Reader, error) {
+	s.mu.Lock()
+	if s.recovering {
+		s.mu.Unlock()
+		return nil, nil, ErrSessionRecovering
+	}
+	s.mu.Unlock()
+
+	cmdSN, err := s.window.acquire(ctx)
+	if err != nil {
+		return nil, nil, fmt.Errorf("session: acquire CmdSN (window full): %w", err)
+	}
+
+	itt := s.router.AllocateITT()
+	pduCh := s.router.RegisterPersistent(itt)
+
+	isWrite := cmd.Data != nil
+	if isWrite {
+		cmd.Write = true
+	}
+
+	tk := newTask(itt, cmd.Read, isWrite, true) // streaming=true
+	tk.lun = cmd.LUN
+	tk.cmd = cmd
+	tk.cmdSN = cmdSN
+
+	tk.erl = uint32(s.params.ErrorRecoveryLevel)
+	tk.getWriteCh = s.getWriteCh
+	tk.expStatSNFunc = s.getExpStatSN
+	tk.snackTimeout = s.cfg.snackTimeout
+
+	s.mu.Lock()
+	s.tasks[itt] = tk
+	expStatSN := s.expStatSN
+	s.mu.Unlock()
+
+	var immediateData []byte
+	if isWrite && s.params.ImmediateData {
+		immLen := min(s.params.FirstBurstLength, s.params.MaxRecvDataSegmentLength)
+		immBuf := make([]byte, immLen)
+		n, readErr := io.ReadFull(cmd.Data, immBuf)
+		if readErr != nil && readErr != io.ErrUnexpectedEOF {
+			s.router.Unregister(itt)
+			s.mu.Lock()
+			delete(s.tasks, itt)
+			s.mu.Unlock()
+			return nil, nil, fmt.Errorf("session: read immediate data: %w", readErr)
+		}
+		immediateData = immBuf[:n]
+		tk.bytesSent = uint32(n)
+	}
+
+	scsiCmd := &pdu.SCSICommand{
+		Header: pdu.Header{
+			Final:            true,
+			InitiatorTaskTag: itt,
+			DataSegmentLen:   uint32(len(immediateData)),
+		},
+		Read:                       cmd.Read,
+		Write:                      cmd.Write,
+		Attr:                       cmd.TaskAttributes,
+		ExpectedDataTransferLength: cmd.ExpectedDataTransferLen,
+		CmdSN:                      cmdSN,
+		ExpStatSN:                  expStatSN,
+		CDB:                        cmd.CDB,
+		ImmediateData:              immediateData,
+	}
+	scsiCmd.Header.LUN = pdu.EncodeSAMLUN(cmd.LUN)
+
+	bhs, encErr := scsiCmd.MarshalBHS()
+	if encErr != nil {
+		s.router.Unregister(itt)
+		s.mu.Lock()
+		delete(s.tasks, itt)
+		s.mu.Unlock()
+		return nil, nil, fmt.Errorf("session: encode SCSICommand (itt=0x%08x cmd_sn=%d): %w", itt, cmdSN, encErr)
+	}
+
+	raw := &transport.RawPDU{BHS: bhs}
+	if len(immediateData) > 0 {
+		raw.DataSegment = immediateData
+	}
+	s.stampDigests(raw)
+
+	select {
+	case s.writeCh <- raw:
+	case <-ctx.Done():
+		s.router.Unregister(itt)
+		s.mu.Lock()
+		delete(s.tasks, itt)
+		s.mu.Unlock()
+		return nil, nil, ctx.Err()
+	}
+
+	tk.reader = cmd.Data
+
+	if isWrite && !s.params.InitialR2T {
+		if err := tk.sendUnsolicitedDataOut(s.writeCh, s.getExpStatSN, s.params, s.stampDigests); err != nil {
+			s.router.Unregister(itt)
+			s.mu.Lock()
+			delete(s.tasks, itt)
+			s.mu.Unlock()
+			return nil, nil, fmt.Errorf("session: unsolicited data: %w", err)
+		}
+	}
+
+	go s.taskLoop(tk, pduCh)
+
+	// Return chanReader as io.Reader. May be nil if this is not a read command.
+	var dataReader io.Reader
+	if tk.dataReader != nil {
+		dataReader = tk.dataReader
+	}
+	return tk.resultCh, dataReader, nil
+}
+
 // Close shuts down the session. If the session is still logged in, it
 // attempts a graceful Logout PDU exchange with a short timeout before
 // force-closing. Close is idempotent via sync.Once.
@@ -637,6 +766,12 @@ func (s *Session) cleanupTask(itt uint32) {
 // ERL >= 1 same-connection retry path, distinct from the ERL 0 reconnect
 // retry in retryTasks which allocates new ITT and CmdSN.
 func (s *Session) retrySameConnection(tk *task) {
+	// Streaming tasks cannot be retried — caller holds the chanReader.
+	if tk.streaming {
+		tk.cancel(fmt.Errorf("session: streaming task not retriable"))
+		return
+	}
+
 	cmd := tk.cmd
 
 	// Reset read buffer for reads.

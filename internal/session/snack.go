@@ -75,18 +75,32 @@ func (t *task) drainPendingDataIn() {
 		delete(t.snack.pendingDataIn, din.DataSN)
 		// Reassemble normally.
 		if len(din.Data) > 0 {
-			t.buf.Write(din.Data)
+			if t.streaming {
+				t.dataReader.ch <- din.Data
+			} else {
+				t.buf.Write(din.Data)
+			}
 		}
 		t.nextDataSN++
 		t.nextOffset += uint32(len(din.Data))
 		if din.HasStatus {
 			t.stopSnackTimer()
-			t.resultCh <- Result{
-				Status:        din.Status,
-				Data:          bytes.NewReader(t.buf.Bytes()),
-				Overflow:      din.ResidualOverflow,
-				Underflow:     din.ResidualUnderflow,
-				ResidualCount: din.ResidualCount,
+			if t.streaming {
+				t.dataReader.close()
+				t.resultCh <- Result{
+					Status:        din.Status,
+					Overflow:      din.ResidualOverflow,
+					Underflow:     din.ResidualUnderflow,
+					ResidualCount: din.ResidualCount,
+				}
+			} else {
+				t.resultCh <- Result{
+					Status:        din.Status,
+					Data:          bytes.NewReader(t.buf.Bytes()),
+					Overflow:      din.ResidualOverflow,
+					Underflow:     din.ResidualUnderflow,
+					ResidualCount: din.ResidualCount,
+				}
 			}
 			return
 		}

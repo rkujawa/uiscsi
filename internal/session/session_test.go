@@ -643,3 +643,74 @@ func TestSCSIResponseSenseDataEmpty(t *testing.T) {
 		})
 	}
 }
+
+func TestSessionSubmitStreamingRead(t *testing.T) {
+	sess, targetConn := newTestSession(t)
+
+	cmd := Command{
+		Read:                    true,
+		ExpectedDataTransferLen: 24,
+	}
+	cmd.CDB[0] = 0x08 // READ(6) — tape-style
+
+	resultCh, dataReader, err := sess.SubmitStreaming(context.Background(), cmd)
+	if err != nil {
+		t.Fatalf("SubmitStreaming: %v", err)
+	}
+	if dataReader == nil {
+		t.Fatal("dataReader is nil for read command")
+	}
+
+	scsiCmd := readSCSICommandPDU(t, targetConn)
+
+	// Read from dataReader concurrently — required because the chanReader
+	// will backpressure if the caller isn't consuming.
+	done := make(chan []byte, 1)
+	go func() {
+		got, _ := io.ReadAll(dataReader)
+		done <- got
+	}()
+
+	// Send 3 Data-In PDUs without status.
+	chunks := [][]byte{
+		[]byte("AAAABBBB"),
+		[]byte("CCCCDDDD"),
+		[]byte("EEEEFFFF"),
+	}
+	offset := uint32(0)
+	for i, chunk := range chunks {
+		writeDataInPDU(t, targetConn, &pdu.DataIn{
+			Header:       pdu.Header{InitiatorTaskTag: scsiCmd.InitiatorTaskTag},
+			DataSN:       uint32(i),
+			BufferOffset: offset,
+			ExpCmdSN:     1,
+			MaxCmdSN:     10,
+			Data:         chunk,
+		})
+		offset += uint32(len(chunk))
+	}
+
+	// Send SCSIResponse with status.
+	writeSCSIResponsePDU(t, targetConn, &pdu.SCSIResponse{
+		Header: pdu.Header{InitiatorTaskTag: scsiCmd.InitiatorTaskTag},
+		Status: 0x00,
+		StatSN: 1,
+	})
+
+	got := <-done
+	want := "AAAABBBBCCCCDDDDEEEEFFFF"
+	if string(got) != want {
+		t.Fatalf("data: got %q, want %q", got, want)
+	}
+
+	result := <-resultCh
+	if result.Err != nil {
+		t.Fatalf("result error: %v", result.Err)
+	}
+	if result.Status != 0x00 {
+		t.Fatalf("status: got 0x%02X, want 0x00", result.Status)
+	}
+	if result.Data != nil {
+		t.Fatal("streaming result should have nil Data")
+	}
+}

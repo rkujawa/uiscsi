@@ -25,9 +25,11 @@ type task struct {
 	nextOffset uint32
 	isRead     bool
 	isWrite    bool
-	reader     io.Reader  // holds cmd.Data for write tasks; exclusively owned by task goroutine after Submit reads immediate data
-	bytesSent  uint32     // cumulative bytes sent: immediate + unsolicited, used for offset tracking
-	startTime  time.Time  // when the task was created, for latency metrics
+	reader     io.Reader    // holds cmd.Data for write tasks; exclusively owned by task goroutine after Submit reads immediate data
+	bytesSent  uint32       // cumulative bytes sent: immediate + unsolicited, used for offset tracking
+	startTime  time.Time    // when the task was created, for latency metrics
+	streaming  bool         // true = chanReader mode (bounded memory), false = bytes.Buffer mode
+	dataReader *chanReader  // non-nil when streaming=true; delivers Data-In chunks to caller
 
 	// ERL 1 SNACK recovery fields.
 	erl           uint32                              // ErrorRecoveryLevel from negotiated params
@@ -37,10 +39,11 @@ type task struct {
 	snack         *snackState                         // SNACK recovery state (nil until gap detected or timer started)
 }
 
-// newTask creates a task for the given ITT. If isRead is true, a buffer
-// is allocated for Data-In reassembly. If isWrite is true, no buffer is
-// allocated (writes don't accumulate Data-In).
-func newTask(itt uint32, isRead bool, isWrite bool) *task {
+// newTask creates a task for the given ITT. If isRead is true, a data
+// accumulation mechanism is allocated: bytes.Buffer for normal mode, or
+// chanReader for streaming mode (bounded memory). If isWrite is true,
+// no read buffer is allocated.
+func newTask(itt uint32, isRead bool, isWrite bool, streaming ...bool) *task {
 	t := &task{
 		itt:       itt,
 		resultCh:  make(chan Result, 1),
@@ -49,7 +52,12 @@ func newTask(itt uint32, isRead bool, isWrite bool) *task {
 		startTime: time.Now(),
 	}
 	if isRead {
-		t.buf = &bytes.Buffer{}
+		if len(streaming) > 0 && streaming[0] {
+			t.streaming = true
+			t.dataReader = newChanReader()
+		} else {
+			t.buf = &bytes.Buffer{}
+		}
 	}
 	return t
 }
@@ -76,25 +84,39 @@ func (t *task) handleDataIn(din *pdu.DataIn) {
 			// Send SNACK for the gap.
 			expStatSN := t.expStatSNFunc()
 			if err := t.sendSNACK(t.getWriteCh, SNACKTypeDataR2T, t.nextDataSN, gap, expStatSN); err != nil {
-				t.resultCh <- Result{Err: fmt.Errorf("session: SNACK send failed: %w", err)}
+				snackErr := fmt.Errorf("session: SNACK send failed: %w", err)
+				if t.streaming && t.dataReader != nil {
+					t.dataReader.closeWithError(snackErr)
+				}
+				t.resultCh <- Result{Err: snackErr}
 			}
 			return
 		}
 
 		// ERL 0: fatal gap (existing behavior).
 		err := fmt.Errorf("session: DataSN gap (itt=0x%08x got=%d want=%d)", t.itt, din.DataSN, t.nextDataSN)
+		if t.streaming && t.dataReader != nil {
+			t.dataReader.closeWithError(err)
+		}
 		t.resultCh <- Result{Err: err}
 		return
 	}
 
 	if din.BufferOffset != t.nextOffset {
 		err := fmt.Errorf("session: BufferOffset mismatch (itt=0x%08x got=%d want=%d)", t.itt, din.BufferOffset, t.nextOffset)
+		if t.streaming && t.dataReader != nil {
+			t.dataReader.closeWithError(err)
+		}
 		t.resultCh <- Result{Err: err}
 		return
 	}
 
 	if len(din.Data) > 0 {
-		t.buf.Write(din.Data)
+		if t.streaming {
+			t.dataReader.ch <- din.Data
+		} else {
+			t.buf.Write(din.Data)
+		}
 	}
 
 	t.nextDataSN++
@@ -135,14 +157,25 @@ func (t *task) handleDataIn(din *pdu.DataIn) {
 	}
 
 	if din.HasStatus {
-		// S-bit: this Data-In carries status. Deliver result with buffered data.
+		// S-bit: this Data-In carries status. Deliver result.
 		t.stopSnackTimer()
-		t.resultCh <- Result{
-			Status:        din.Status,
-			Data:          bytes.NewReader(t.buf.Bytes()),
-			Overflow:      din.ResidualOverflow,
-			Underflow:     din.ResidualUnderflow,
-			ResidualCount: din.ResidualCount,
+		if t.streaming {
+			t.dataReader.close()
+			t.resultCh <- Result{
+				Status:        din.Status,
+				Overflow:      din.ResidualOverflow,
+				Underflow:     din.ResidualUnderflow,
+				ResidualCount: din.ResidualCount,
+				// Data is nil — caller already has the chanReader.
+			}
+		} else {
+			t.resultCh <- Result{
+				Status:        din.Status,
+				Data:          bytes.NewReader(t.buf.Bytes()),
+				Overflow:      din.ResidualOverflow,
+				Underflow:     din.ResidualUnderflow,
+				ResidualCount: din.ResidualCount,
+			}
 		}
 	}
 }
@@ -168,14 +201,22 @@ func (t *task) handleSCSIResponse(resp *pdu.SCSIResponse) {
 		Underflow:     resp.Underflow,
 		ResidualCount: resp.ResidualCount,
 	}
-	if t.isRead && t.buf.Len() > 0 {
+	if t.streaming && t.dataReader != nil {
+		t.dataReader.close()
+		// Data already delivered via chanReader; r.Data stays nil.
+	} else if t.isRead && t.buf != nil && t.buf.Len() > 0 {
 		r.Data = bytes.NewReader(t.buf.Bytes())
 	}
 	t.resultCh <- r
 }
 
-// cancel aborts this task with an error.
+// cancel aborts this task with an error. For streaming tasks, the
+// chanReader is closed with the error so that the caller's Read
+// returns it immediately.
 func (t *task) cancel(err error) {
+	if t.streaming && t.dataReader != nil {
+		t.dataReader.closeWithError(err)
+	}
 	select {
 	case t.resultCh <- Result{Err: err}:
 	default:

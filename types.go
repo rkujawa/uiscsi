@@ -3,6 +3,7 @@
 package uiscsi
 
 import (
+	"io"
 	"time"
 
 	"github.com/rkujawa/uiscsi/internal/scsi"
@@ -78,15 +79,16 @@ type Portal struct {
 	GroupTag int
 }
 
-// Result carries a SCSI command outcome. Data is already consumed into []byte
-// by the typed Session methods.
-type Result struct {
-	Status        uint8
-	Data          []byte
-	SenseData     []byte
-	Overflow      bool
-	Underflow     bool
-	ResidualCount uint32
+// result carries an intermediate SCSI command outcome used internally by
+// submitAndCheck. Not exported — callers use the typed return values of
+// Session methods, or RawResult/StreamResult for raw CDB pass-through.
+type result struct {
+	status        uint8
+	data          []byte
+	senseData     []byte
+	overflow      bool
+	underflow     bool
+	residualCount uint32
 }
 
 // RawResult carries the raw SCSI command outcome for Execute().
@@ -94,6 +96,48 @@ type RawResult struct {
 	Status    uint8
 	Data      []byte
 	SenseData []byte
+}
+
+// StreamResult carries the outcome of a streaming raw SCSI command via
+// [Session.StreamExecute]. Unlike [RawResult], Data is an [io.Reader] that
+// streams the response as PDUs arrive, without buffering the entire response
+// into []byte. This is critical for high-throughput sequential devices (tape
+// drives, etc.) where large blocks (256KB–4MB) at sustained rates (400+ MB/s)
+// make double-buffering expensive.
+//
+// Memory usage is bounded to a small number of PDU-sized chunks regardless
+// of the total transfer size (typically ~64KB with default negotiated
+// parameters).
+//
+// The caller must fully consume Data (or drain to [io.Discard]), then call
+// [StreamResult.Wait] to retrieve the final SCSI status and sense data.
+//
+// Usage:
+//
+//	sr, err := session.StreamExecute(ctx, lun, cdb, uiscsi.WithDataIn(blockSize))
+//	if err != nil { ... }
+//	_, err = io.Copy(dst, sr.Data)     // stream data
+//	status, sense, err := sr.Wait()    // get final status
+type StreamResult struct {
+	// Data streams the SCSI read response as PDUs arrive from the target.
+	// Nil for non-read commands. Must be fully consumed before calling Wait.
+	Data io.Reader
+
+	// resultCh delivers the final status/sense when the command completes.
+	resultCh <-chan session.Result
+}
+
+// Wait blocks until the SCSI command completes and returns the final status
+// and sense data. The caller should fully consume (or discard) Data before
+// calling Wait; otherwise Wait may block indefinitely due to flow-control
+// backpressure. If the transport fails mid-transfer, Data.Read returns the
+// error, and Wait returns it as well.
+func (sr *StreamResult) Wait() (status uint8, senseData []byte, err error) {
+	r := <-sr.resultCh
+	if r.Err != nil {
+		return 0, nil, r.Err
+	}
+	return r.Status, r.SenseData, nil
 }
 
 // InquiryData holds a parsed INQUIRY response.

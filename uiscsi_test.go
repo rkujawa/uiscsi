@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/binary"
 	"errors"
-	"io"
 	"testing"
 	"time"
 
@@ -155,13 +154,3 @@ func TestDecodeLUN(t *testing.T) {
 	}
 }
 
-func TestStreamRead_ReturnsReader(t *testing.T) {
-	// Type assertion test: StreamRead's return type should include io.Reader.
-	// We can't call it without a session, but we verify the method signature
-	// exists and returns (io.Reader, error) via the compiler.
-	var s *uiscsi.Session
-	_ = s // Session.StreamRead signature is verified at compile time.
-
-	// Verify io.Reader is imported and usable in this context.
-	var _ io.Reader
-}

@@ -18,6 +18,8 @@ type Session struct {
 	s *session.Session
 }
 
+// ── Session lifecycle ──────────────────────────────────────────────────
+
 // Close shuts down the session, performing a graceful logout if possible.
 func (s *Session) Close() error {
 	return s.s.Close()
@@ -79,6 +81,8 @@ func (s *Session) submitAndCheck(ctx context.Context, cmd session.Command) ([]by
 	}
 	return nil, nil
 }
+
+// ── SCSI commands ─────────────────────────────────────────────────────
 
 // ReadBlocks reads blocks from the target. Uses READ(16) for full 64-bit LBA support.
 func (s *Session) ReadBlocks(ctx context.Context, lun uint64, lba uint64, blocks uint32, blockSize uint32) ([]byte, error) {
@@ -244,9 +248,16 @@ func (s *Session) PersistReserveOut(ctx context.Context, lun uint64, serviceActi
 	return err
 }
 
+// ── iSCSI protocol operations ─────────────────────────────────────────
+//
+// These methods expose low-level RFC 7143 protocol mechanics. Most
+// callers should use [Session.Close] for session teardown. Use these
+// only when you need explicit control over iSCSI PDU exchanges.
+
 // Logout performs a graceful session logout. It waits for in-flight
 // commands to complete, then exchanges Logout/LogoutResp PDUs with the
-// target before shutting down. Per RFC 7143 Section 11.14.
+// target before shutting down. Per RFC 7143 Section 11.14. Most callers
+// should use [Session.Close] instead, which calls Logout internally.
 func (s *Session) Logout(ctx context.Context) error {
 	return s.s.Logout(ctx)
 }
@@ -254,12 +265,13 @@ func (s *Session) Logout(ctx context.Context) error {
 // SendExpStatSNConfirmation sends a NOP-Out that confirms ExpStatSN to the
 // target without expecting a response. Per RFC 7143 Section 11.18:
 // ITT=0xFFFFFFFF (no response), TTT=0xFFFFFFFF, Immediate=true.
-// CmdSN is carried but NOT advanced.
+// CmdSN is carried but NOT advanced. This is an advanced operation; most
+// callers do not need it.
 func (s *Session) SendExpStatSNConfirmation() error {
 	return s.s.SendExpStatSNConfirmation()
 }
 
-// Task Management Functions
+// ── Task management (TMF) ─────────────────────────────────────────────
 
 // AbortTask aborts a single task identified by its initiator task tag.
 func (s *Session) AbortTask(ctx context.Context, taskTag uint32) (*TMFResult, error) {
@@ -315,6 +327,8 @@ func (s *Session) TargetColdReset(ctx context.Context) (*TMFResult, error) {
 	return convertTMFResult(r), nil
 }
 
+// ── Raw CDB pass-through ──────────────────────────────────────────────
+
 // ExecuteOption configures raw CDB execution via Execute.
 type ExecuteOption func(*executeConfig)
 
@@ -341,6 +355,14 @@ func WithDataOut(r io.Reader, length uint32) ExecuteOption {
 
 // Execute sends a raw CDB to the target and returns the raw result.
 // This is the low-level pass-through for arbitrary SCSI commands.
+//
+// Unlike typed methods ([Session.ReadBlocks], [Session.Inquiry], etc.),
+// Execute does NOT interpret the SCSI status. A CHECK CONDITION response
+// is returned as RawResult.Status == 0x02 with raw sense bytes in
+// RawResult.SenseData — the caller is responsible for parsing and acting
+// on them. This is intentional: raw CDB callers (tape drivers, custom
+// device modules) need unfiltered access to status and sense data to
+// implement device-specific error handling.
 func (s *Session) Execute(ctx context.Context, lun uint64, cdb []byte, opts ...ExecuteOption) (*RawResult, error) {
 	cfg := &executeConfig{}
 	for _, o := range opts {
@@ -387,4 +409,60 @@ func (s *Session) Execute(ctx context.Context, lun uint64, cdb []byte, opts ...E
 		}
 	}
 	return rr, nil
+}
+
+// StreamExecute sends a raw CDB to the target and returns a streaming result.
+// Unlike [Session.Execute], the response data is returned as an [io.Reader]
+// that streams Data-In PDUs as they arrive, with bounded memory usage
+// (~64KB) regardless of total transfer size. This makes it suitable for
+// any device type — block, tape, or otherwise.
+//
+// The returned [StreamResult.Data] must be fully consumed (or drained to
+// [io.Discard]), then [StreamResult.Wait] must be called to retrieve the
+// final SCSI status and sense data. Failing to consume Data before Wait
+// may cause Wait to block indefinitely due to flow-control backpressure.
+//
+// Like [Session.Execute], StreamExecute does NOT interpret the SCSI status.
+// CHECK CONDITION (0x02) is reported via [StreamResult.Wait] with raw sense
+// bytes — the caller must parse and handle them. See [Execute] for details.
+//
+// Write commands work identically to [Session.Execute] — the [io.Reader]
+// provided via [WithDataOut] is streamed through Data-Out PDUs without
+// intermediate buffering regardless of which method is used.
+func (s *Session) StreamExecute(ctx context.Context, lun uint64, cdb []byte, opts ...ExecuteOption) (*StreamResult, error) {
+	cfg := &executeConfig{}
+	for _, o := range opts {
+		o(cfg)
+	}
+
+	if len(cdb) == 0 {
+		return nil, fmt.Errorf("iscsi execute: empty CDB")
+	}
+	if len(cdb) > 16 {
+		return nil, fmt.Errorf("iscsi execute: CDB length %d exceeds maximum 16 bytes (AHS Extended CDB not yet supported)", len(cdb))
+	}
+
+	var cmd session.Command
+	copy(cmd.CDB[:len(cdb)], cdb)
+	cmd.LUN = lun
+
+	if cfg.dataInLen > 0 {
+		cmd.Read = true
+		cmd.ExpectedDataTransferLen = cfg.dataInLen
+	}
+	if cfg.dataOut != nil {
+		cmd.Write = true
+		cmd.Data = cfg.dataOut
+		cmd.ExpectedDataTransferLen = cfg.dataOutLen
+	}
+
+	resultCh, dataReader, err := s.s.SubmitStreaming(ctx, cmd)
+	if err != nil {
+		return nil, wrapTransportError("submit", err)
+	}
+
+	return &StreamResult{
+		Data:     dataReader,
+		resultCh: resultCh,
+	}, nil
 }
