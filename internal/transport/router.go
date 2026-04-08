@@ -60,7 +60,7 @@ func (r *Router) RegisterPersistent(itt uint32) <-chan *RawPDU {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	ch := make(chan *RawPDU, 8)
+	ch := make(chan *RawPDU, 64)
 	r.pending[itt] = &routerEntry{ch: ch, persistent: true}
 	return ch
 }

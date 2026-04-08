@@ -6,11 +6,12 @@ import (
 )
 
 // chanBufSize is the channel buffer capacity for streaming Data-In delivery.
-// With default MaxRecvDataSegmentLength of 8192 bytes, this bounds memory to
-// ~64KB of in-flight data. The channel provides natural TCP backpressure:
-// when full, handleDataIn blocks, which blocks the task loop, which stops the
-// read pump, which fills the TCP receive buffer and triggers flow control.
-const chanBufSize = 8
+// With default MaxRecvDataSegmentLength of 8192 bytes, 128 slots = ~1MB of
+// in-flight data (~38ms at 26 MB/s). This must be large enough to absorb
+// GC pauses and consumer stalls without triggering TCP backpressure —
+// once the TCP window closes, tape drives stop streaming and require
+// expensive mechanical repositioning (shoe-shining).
+const chanBufSize = 128
 
 // chanReader streams data from a producer (handleDataIn) to a consumer
 // (the caller reading Result.Data or the io.Reader from SubmitStreaming)
