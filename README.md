@@ -2,25 +2,33 @@
 
 A pure-userspace iSCSI initiator library for Go.
 
-**Status:** v1.1.2 -- full RFC 7143 compliance with 87 wire-level conformance tests and 21 E2E tests against real LIO kernel targets. Bounded-memory streaming I/O for high-throughput devices (tape, etc.).
+**Status:** v1.2.0 -- full RFC 7143 compliance with 87 wire-level conformance tests and 21 E2E tests against real LIO kernel targets. Grouped Session API. Bounded-memory streaming I/O.
 
 ## Overview
 
 uiscsi implements the iSCSI protocol (RFC 7143) entirely in userspace. There are no kernel modules, no open-iscsi dependency, and no external tools. Go applications import the library and communicate directly with iSCSI targets over TCP.
 
-The library provides both a high-level typed API (ReadBlocks, WriteBlocks, Inquiry) and a low-level raw CDB pass-through for arbitrary SCSI commands. It supports CHAP and mutual CHAP authentication, header and data digest negotiation with CRC32C, and error recovery levels 0 through 2.
+The library provides a grouped API organized by concern:
+- **`sess.SCSI()`** -- typed SCSI commands (ReadBlocks, Inquiry, ModeSelect, etc.)
+- **`sess.Raw()`** -- raw CDB pass-through with bounded-memory streaming
+- **`sess.TMF()`** -- task management (AbortTask, LUNReset, etc.)
+- **`sess.Protocol()`** -- low-level iSCSI protocol operations
+
+It supports CHAP and mutual CHAP authentication, header and data digest negotiation with CRC32C, and error recovery levels 0 through 2.
 
 ## Features
 
 - **Pure userspace** -- no kernel iSCSI stack, no iscsiadm, no external tools
 - **RFC 7143 compliant** -- PDU codec, login negotiation, full feature phase
-- **Go-idiomatic API** -- context.Context, io.Reader/io.Writer, functional options
+- **Grouped API** -- organized by concern (SCSI, TMF, Raw, Protocol) for discoverability
+- **Go-idiomatic** -- context.Context, io.Reader/io.Writer, functional options
 - **Authentication** -- CHAP and mutual CHAP
-- **Block I/O** -- ReadBlocks/WriteBlocks with `[]byte`, StreamWrite with io.Reader
-- **Raw CDB pass-through** -- Execute (buffered) and StreamExecute (bounded-memory streaming)
+- **Block I/O** -- ReadBlocks/WriteBlocks via `sess.SCSI()`
+- **Raw CDB pass-through** -- Execute (buffered) and StreamExecute (bounded-memory streaming) via `sess.Raw()`
 - **Streaming I/O** -- StreamExecute streams Data-In PDUs via bounded-memory channel (~64KB), suitable for tape drives at 400+ MB/s
+- **Mode pages** -- ModeSense6/10 and ModeSelect6/10 for device configuration
 - **Error recovery** -- ERL 0 (session reconnect), ERL 1 (SNACK), ERL 2 (connection replace)
-- **Task management** -- ABORT TASK, LUN RESET, TARGET WARM/COLD RESET
+- **Task management** -- ABORT TASK, LUN RESET, TARGET WARM/COLD RESET via `sess.TMF()`
 - **Observability** -- slog structured logging, PDU hooks, metrics callbacks
 - **Digests** -- CRC32C header and data digest negotiation and verification
 - **Discovery** -- SendTargets enumeration, multi-portal support
@@ -46,16 +54,6 @@ import (
 func main() {
     ctx := context.Background()
 
-    // Discover available targets.
-    targets, err := uiscsi.Discover(ctx, "192.168.1.100:3260")
-    if err != nil {
-        log.Fatal(err)
-    }
-    for _, t := range targets {
-        fmt.Println(t.Name)
-    }
-
-    // Connect to a target.
     sess, err := uiscsi.Dial(ctx, "192.168.1.100:3260",
         uiscsi.WithTarget("iqn.2026-03.com.example:storage"),
     )
@@ -64,8 +62,8 @@ func main() {
     }
     defer sess.Close()
 
-    // Read the first block.
-    data, err := sess.ReadBlocks(ctx, 0, 0, 1, 512)
+    // Typed SCSI commands via sess.SCSI()
+    data, err := sess.SCSI().ReadBlocks(ctx, 0, 0, 1, 512)
     if err != nil {
         log.Fatal(err)
     }
@@ -73,48 +71,61 @@ func main() {
 }
 ```
 
-## Examples
-
-Complete example programs are in the `examples/` directory:
-
-- **[examples/discover-read/](examples/discover-read/)** -- Discover targets, login, query capacity, read blocks
-- **[examples/write-verify/](examples/write-verify/)** -- Write blocks and verify with readback
-- **[examples/raw-cdb/](examples/raw-cdb/)** -- Send custom SCSI commands via raw CDB pass-through
-- **[examples/error-handling/](examples/error-handling/)** -- Typed error handling and recovery patterns
-
-## CLI Tool
-
-`uiscsi-ls` is a standalone discovery utility built on the library:
-
-```
-go install github.com/rkujawa/uiscsi/uiscsi-ls@latest
-
-uiscsi-ls 192.168.1.100
-```
-
-Output resembles `lsscsi` -- columnar format with target IQN, LUN type, vendor, capacity. Supports `--json` for machine-readable output, `--chap-user`/`--chap-password` for authenticated discovery, and `--initiator-name` for custom initiator IQN.
-
 ## API Reference
 
 Full documentation is available on [pkg.go.dev](https://pkg.go.dev/github.com/rkujawa/uiscsi).
 
-Key types and functions:
+### Session Accessors
 
-| Function/Type | Description |
-|---------------|-------------|
-| `Dial` | Connect to a target and return a Session |
-| `Discover` | Enumerate available iSCSI targets |
-| `Session.ReadBlocks` | Read blocks from a LUN |
-| `Session.WriteBlocks` | Write blocks to a LUN |
-| `Session.Execute` | Raw CDB pass-through (returns `[]byte`) |
-| `Session.StreamExecute` | Raw CDB pass-through (returns streaming `io.Reader`, bounded memory) |
-| `Session.Inquiry` | SCSI INQUIRY command |
-| `Session.ReadCapacity` | Query LUN capacity |
+| Accessor | Returns | Purpose |
+|----------|---------|---------|
+| `sess.SCSI()` | `*SCSIOps` | Typed SCSI commands with automatic status/sense handling |
+| `sess.Raw()` | `*RawOps` | Raw CDB pass-through (caller interprets status) |
+| `sess.TMF()` | `*TMFOps` | Task management functions |
+| `sess.Protocol()` | `*ProtocolOps` | Low-level iSCSI protocol operations |
+
+### SCSI Commands (`sess.SCSI()`)
+
+| Method | Description |
+|--------|-------------|
+| `ReadBlocks` | Read blocks from a LUN |
+| `WriteBlocks` | Write blocks to a LUN |
+| `Inquiry` | SCSI INQUIRY |
+| `ReadCapacity` | Query LUN capacity |
+| `TestUnitReady` | Check LUN readiness |
+| `ModeSense6` / `ModeSense10` | Query mode pages |
+| `ModeSelect6` / `ModeSelect10` | Set mode pages |
+| `ReportLuns` | Enumerate LUNs |
+| `SynchronizeCache` | Flush volatile cache |
+| `Verify` | Verify LBA range |
+| `WriteSame` | Fill LBA range |
+| `Unmap` | Thin provisioning deallocate |
+| `CompareAndWrite` | Atomic read-compare-write |
+| `StartStopUnit` | Power management |
+| `PersistReserveIn` / `PersistReserveOut` | Persistent reservations |
+
+### Raw CDB (`sess.Raw()`)
+
+| Method | Description |
+|--------|-------------|
+| `Execute` | Send any CDB, returns buffered `*RawResult` with `[]byte` data |
+| `StreamExecute` | Send any CDB, returns streaming `*StreamResult` with `io.Reader` data |
+| `WithDataIn` | Configure read response allocation |
+| `WithDataOut` | Configure write data |
+
+### Helpers
+
+| Function | Description |
+|----------|-------------|
 | `ParseSenseData` | Parse raw sense bytes into `SenseInfo` |
 | `CheckStatus` | Convert SCSI status + sense into `*SCSIError` |
-| `WithTarget` | Set target IQN |
-| `WithCHAP` | Enable CHAP authentication |
-| `WithLogger` | Inject slog.Logger |
+| `DecodeLUN` | Decode SAM LUN encoding |
+| `DeviceTypeName` | Human-readable device type |
+
+### Error Types
+
+| Type | Description |
+|------|-------------|
 | `SCSIError` | SCSI command failure with sense data |
 | `TransportError` | iSCSI transport/connection failure |
 | `AuthError` | Authentication failure |
@@ -126,8 +137,6 @@ The library includes three test tiers:
 - **Unit tests** -- table-driven tests for PDU codec, serial arithmetic, sense parsing (`go test ./...`)
 - **Conformance tests** -- 87 wire-level tests against an in-process mock iSCSI target with PDU capture (`test/conformance/`). Covers 84% of the UNH-IOL Initiator Full Feature Phase test suite (see `doc/test_matrix_initiator_ffp.md`).
 - **E2E tests** -- 21 tests against a real Linux LIO kernel target via configfs (`sudo go test -tags e2e ./test/e2e/`)
-
-Conformance test areas: CmdSN sequencing, command window enforcement, Data-In/Out PDU fields, R2T fulfillment, SCSI command modes, SNACK recovery, error injection, NOP-Out/In, session lifecycle, async messages, ERL 2 connection replacement, TMF wire fields, Abort Task Set behavior, and Text Request negotiation.
 
 ## Requirements
 
