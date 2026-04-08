@@ -43,6 +43,21 @@
 //	_, err = io.Copy(dst, sr.Data)
 //	status, sense, err := sr.Wait()
 //
+// # Performance Tuning
+//
+// The default MaxRecvDataSegmentLength is 8192 bytes (8KB per PDU). For
+// high-throughput workloads (tape, large block I/O), increase it with
+// [WithMaxRecvDataSegmentLength]:
+//
+//	sess, err := uiscsi.Dial(ctx, addr,
+//	    uiscsi.WithTarget(iqn),
+//	    uiscsi.WithMaxRecvDataSegmentLength(262144), // 256KB per PDU
+//	)
+//
+// This reduces per-PDU overhead and improves streaming throughput. With
+// StreamExecute, the bounded-memory window scales with MRDSL: 8 chunks
+// × MRDSL bytes (e.g., 8 × 256KB = 2MB in-flight with 256KB MRDSL).
+//
 // # Other API Groups
 //
 // Task management: [Session.TMF] — AbortTask, LUNReset, TargetWarmReset, etc.

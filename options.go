@@ -4,6 +4,7 @@ package uiscsi
 import (
 	"context"
 	"encoding/binary"
+	"fmt"
 	"log/slog"
 	"time"
 
@@ -114,6 +115,26 @@ func WithMetricsHook(h func(MetricEvent)) Option {
 	return func(c *dialConfig) {
 		c.sessionOpts = append(c.sessionOpts, session.WithMetricsHook(func(me session.MetricEvent) {
 			h(convertMetricEvent(me))
+		}))
+	}
+}
+
+// WithMaxRecvDataSegmentLength sets the maximum data segment size (in bytes)
+// that the initiator is willing to receive per PDU. The target uses this to
+// limit Data-In PDU sizes. Default is 8192 (8KB).
+//
+// For high-throughput workloads (tape drives, large block I/O), increasing
+// this to 65536 (64KB) or 262144 (256KB) significantly reduces per-PDU
+// overhead and improves streaming performance. The value must be between
+// 512 and 16777215 per RFC 7143.
+//
+// This controls the initiator's declared value. The target independently
+// declares its own MaxRecvDataSegmentLength (limiting Data-Out PDU sizes
+// from the initiator). Both directions are negotiated independently.
+func WithMaxRecvDataSegmentLength(size uint32) Option {
+	return func(c *dialConfig) {
+		c.loginOpts = append(c.loginOpts, login.WithOperationalOverrides(map[string]string{
+			"MaxRecvDataSegmentLength": fmt.Sprintf("%d", size),
 		}))
 	}
 }

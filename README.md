@@ -25,7 +25,8 @@ It supports CHAP and mutual CHAP authentication, header and data digest negotiat
 - **Authentication** -- CHAP and mutual CHAP
 - **Block I/O** -- ReadBlocks/WriteBlocks via `sess.SCSI()`
 - **Raw CDB pass-through** -- Execute (buffered) and StreamExecute (bounded-memory streaming) via `sess.Raw()`
-- **Streaming I/O** -- StreamExecute streams Data-In PDUs via bounded-memory channel (~64KB), suitable for tape drives at 400+ MB/s
+- **Streaming I/O** -- StreamExecute streams Data-In PDUs via bounded-memory channel, suitable for tape drives at 400+ MB/s
+- **Tunable PDU size** -- `WithMaxRecvDataSegmentLength` for high-throughput workloads (default 8KB, recommended 256KB for tape)
 - **Mode pages** -- ModeSense6/10 and ModeSelect6/10 for device configuration
 - **Error recovery** -- ERL 0 (session reconnect), ERL 1 (SNACK), ERL 2 (connection replace)
 - **Task management** -- ABORT TASK, LUN RESET, TARGET WARM/COLD RESET via `sess.TMF()`
@@ -121,6 +122,19 @@ Full documentation is available on [pkg.go.dev](https://pkg.go.dev/github.com/rk
 | `CheckStatus` | Convert SCSI status + sense into `*SCSIError` |
 | `DecodeLUN` | Decode SAM LUN encoding |
 | `DeviceTypeName` | Human-readable device type |
+
+### Performance Tuning
+
+For high-throughput workloads (tape drives, large sequential I/O), increase the PDU data segment size:
+
+```go
+sess, err := uiscsi.Dial(ctx, addr,
+    uiscsi.WithTarget(iqn),
+    uiscsi.WithMaxRecvDataSegmentLength(262144), // 256KB per PDU
+)
+```
+
+The default `MaxRecvDataSegmentLength` is 8192 bytes (8KB). With 8KB PDUs, a 4MB tape block requires ~512 PDUs with per-PDU overhead. With 256KB PDUs, the same block needs only ~16 PDUs. StreamExecute's bounded-memory window scales proportionally: 8 × MRDSL (e.g., 8 × 256KB = 2MB in-flight).
 
 ### Error Types
 
