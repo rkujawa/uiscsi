@@ -207,6 +207,19 @@ Maps each test from the **UNH-IOL iSCSI Initiator Full Feature Phase Test Suite 
 | #16.4.6 | RESERVATION CONFLICT → automatic re-issue | Same — error typed correctly; caller handles retry |
 | #14.2 | Multi-connection logout | MaxConnections=1 enforced |
 
+### LIO Negotiation Limitations (v1.2.0 note)
+
+The E2E test `TestNegotiation_ImmediateDataInitialR2T` only tests the ImmYes_R2TYes combination against real LIO. The other three combinations fail at the LIO level:
+
+| Combination | LIO Behavior |
+|-------------|-------------|
+| ImmYes_R2TYes | Works — default configuration, primary E2E test |
+| ImmYes_R2TNo | EOF during unsolicited Data-Out |
+| ImmNo_R2TYes | Reject (reason 0x04) or connection reset |
+| ImmNo_R2TNo | Same as ImmNo_R2TYes |
+
+All four combinations are covered at the wire level by conformance tests (`TestSCSICommand_ImmediateDataMatrix` in `test/conformance/scsicommand_test.go`) against the in-process mock target. The E2E limitation is LIO-specific, not a uiscsi bug.
+
 ### Streaming I/O (v1.1.2 additions)
 
 StreamExecute provides bounded-memory streaming for arbitrary SCSI commands, critical for high-throughput sequential devices (tape). Tests exercise the chanReader-backed streaming path through both mock and real kernel targets:
