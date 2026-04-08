@@ -2,7 +2,7 @@
 
 A pure-userspace iSCSI initiator library for Go.
 
-**Status:** v1.2.0 -- full RFC 7143 compliance with 87 wire-level conformance tests and 21 E2E tests against real LIO kernel targets. Grouped Session API. Bounded-memory streaming I/O.
+**Status:** v1.3.0 -- full RFC 7143 compliance with 87 wire-level conformance tests and 21 E2E tests against real LIO kernel targets. Grouped Session API. Bounded-memory streaming I/O. Configurable performance tuning.
 
 ## Overview
 
