@@ -1,3 +1,3 @@
-module github.com/rkujawa/uiscsi
+module github.com/uiscsi/uiscsi
 
 go 1.25
