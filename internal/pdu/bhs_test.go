@@ -18,7 +18,9 @@ func TestEncodeDecodeDataSegmentLength(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var bhs [BHSLength]byte
-			encodeDataSegmentLength(bhs[:], tt.val)
+			if err := encodeDataSegmentLength(bhs[:], tt.val); err != nil {
+				t.Fatalf("encodeDataSegmentLength(%d): %v", tt.val, err)
+			}
 			got := decodeDataSegmentLength(bhs[:])
 			if got != tt.val {
 				t.Errorf("round-trip failed: encoded %d, decoded %d", tt.val, got)
@@ -32,7 +34,9 @@ func TestEncodeDataSegmentLengthPreservesTotalAHSLength(t *testing.T) {
 	// corrupt TotalAHSLength (byte 4).
 	var bhs [BHSLength]byte
 	bhs[4] = 0xAA // TotalAHSLength
-	encodeDataSegmentLength(bhs[:], 0x123456)
+	if err := encodeDataSegmentLength(bhs[:], 0x123456); err != nil {
+		t.Fatalf("encodeDataSegmentLength: %v", err)
+	}
 	if bhs[4] != 0xAA {
 		t.Errorf("TotalAHSLength corrupted: got 0x%02x, want 0xAA", bhs[4])
 	}
@@ -87,20 +91,18 @@ func TestEncodeOpcodeByteMasks(t *testing.T) {
 	}
 }
 
-func TestEncodeDataSegmentLength_PanicsOnOverflow(t *testing.T) {
-	defer func() {
-		r := recover()
-		if r == nil {
-			t.Fatal("expected panic for dsLen > 0xFFFFFF")
-		}
-	}()
+func TestEncodeDataSegmentLength_ErrorOnOverflow(t *testing.T) {
 	bhs := make([]byte, BHSLength)
-	encodeDataSegmentLength(bhs, 0x1000000) // 24-bit max + 1
+	if err := encodeDataSegmentLength(bhs, 0x1000000); err == nil {
+		t.Fatal("expected error for dsLen > 0xFFFFFF")
+	}
 }
 
 func TestEncodeDataSegmentLength_MaxValid(t *testing.T) {
 	bhs := make([]byte, BHSLength)
-	encodeDataSegmentLength(bhs, 0xFFFFFF)
+	if err := encodeDataSegmentLength(bhs, 0xFFFFFF); err != nil {
+		t.Fatalf("encodeDataSegmentLength: %v", err)
+	}
 	got := decodeDataSegmentLength(bhs)
 	if got != 0xFFFFFF {
 		t.Fatalf("expected 0xFFFFFF, got 0x%X", got)

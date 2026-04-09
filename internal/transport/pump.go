@@ -101,7 +101,7 @@ func ReadPump(ctx context.Context, r io.Reader, router *Router,
 			select {
 			case unsolicitedCh <- raw:
 			default:
-				logger.Warn("transport: unsolicited PDU channel full, dropping PDU",
+				logger.Error("transport: unsolicited PDU channel full, dropping PDU",
 					"opcode", raw.BHS[0]&0x3f)
 			}
 			continue

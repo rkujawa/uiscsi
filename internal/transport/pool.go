@@ -25,11 +25,13 @@ func PutBHS(b *[pdu.BHSLength]byte) {
 	bhsPool.Put(b)
 }
 
-// Size classes for data segment buffer pooling.
+// Size classes for data segment buffer pooling. Tiers match common
+// MaxRecvDataSegmentLength values: 4KB (small responses), 64KB (typical
+// high-throughput MRDSL), 16MB (RFC 7143 maximum, 24-bit DS length field).
 const (
-	smallBufSize  = 4096    // <= 4KB
-	mediumBufSize = 65536   // <= 64KB
-	largeBufSize  = 1 << 24 // <= 16MB
+	smallBufSize  = 4096    // <= 4KB: status responses, sense data
+	mediumBufSize = 65536   // <= 64KB: default MRDSL range
+	largeBufSize  = 1 << 24 // <= 16MB: RFC 7143 max data segment length
 )
 
 var (

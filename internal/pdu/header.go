@@ -48,15 +48,18 @@ type Header struct {
 }
 
 // marshalHeader writes the common Header fields into the first 20 bytes of a BHS.
-func (h *Header) marshalHeader(bhs []byte) {
+func (h *Header) marshalHeader(bhs []byte) error {
 	bhs[0] = encodeOpcodeByte(h.OpCode_, h.Immediate)
 	if h.Final {
 		bhs[1] |= 0x80
 	}
 	bhs[4] = h.TotalAHSLength
-	encodeDataSegmentLength(bhs, h.DataSegmentLen)
+	if err := encodeDataSegmentLength(bhs, h.DataSegmentLen); err != nil {
+		return err
+	}
 	copy(bhs[8:16], h.LUN[:])
 	binary.BigEndian.PutUint32(bhs[16:20], h.InitiatorTaskTag)
+	return nil
 }
 
 // unmarshalHeader reads the common Header fields from a 48-byte BHS.

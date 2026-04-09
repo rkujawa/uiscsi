@@ -29,6 +29,7 @@ var ErrSessionRecovering = errors.New("session: recovery in progress")
 // dispatches SCSI commands with ITT correlation, and reassembles
 // multi-PDU Data-In responses.
 type Session struct {
+	ctx    context.Context
 	conn   *transport.Conn
 	params login.NegotiatedParams
 	router *transport.Router
@@ -70,11 +71,12 @@ func NewSession(conn *transport.Conn, params login.NegotiatedParams, opts ...Ses
 	ctx, cancel := context.WithCancel(context.Background())
 
 	s := &Session{
+		ctx:        ctx,
 		conn:       conn,
 		params:     params,
 		router:     transport.NewRouter(cfg.routerBufDepth),
 		writeCh:    make(chan *transport.RawPDU, 64),
-		unsolCh:    make(chan *transport.RawPDU, 16),
+		unsolCh:    make(chan *transport.RawPDU, 64),
 		window:     newCmdWindow(params.CmdSN, params.CmdSN, params.CmdSN),
 		expStatSN:  params.ExpStatSN,
 		tasks:      make(map[uint32]*task),
@@ -397,8 +399,11 @@ func (s *Session) Close() error {
 			"was_logged_in", wasLoggedIn)
 
 		if wasLoggedIn && !hasErr {
-			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-			_ = s.logout(ctx, 0)
+			const logoutTimeout = 5 * time.Second // enough for a single PDU round-trip
+			ctx, cancel := context.WithTimeout(context.Background(), logoutTimeout)
+			if err := s.logout(ctx, 0); err != nil {
+				s.cfg.logger.Warn("session: logout failed during close", "err", err)
+			}
 			cancel()
 		}
 
@@ -513,7 +518,7 @@ func (s *Session) pduHookBridge() func(uint8, *transport.RawPDU) {
 			if dir == transport.HookReceive {
 				d = PDUReceive
 			}
-			s.cfg.pduHook(context.Background(), d, raw)
+			s.cfg.pduHook(s.ctx, d, raw)
 		}
 		if s.cfg.metricsHook != nil {
 			opcode := pdu.OpCode(raw.BHS[0] & 0x3f)

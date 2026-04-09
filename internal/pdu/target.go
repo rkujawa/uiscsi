@@ -18,7 +18,9 @@ func (p *NOPIn) DataSegment() []byte   { return p.Data }
 func (p *NOPIn) MarshalBHS() ([BHSLength]byte, error) {
 	var bhs [BHSLength]byte
 	p.Header.OpCode_ = OpNOPIn
-	p.Header.marshalHeader(bhs[:])
+	if err := p.Header.marshalHeader(bhs[:]); err != nil {
+		return bhs, err
+	}
 	binary.BigEndian.PutUint32(bhs[20:24], p.TargetTransferTag)
 	binary.BigEndian.PutUint32(bhs[24:28], p.StatSN)
 	binary.BigEndian.PutUint32(bhs[28:32], p.ExpCmdSN)
@@ -58,7 +60,9 @@ func (p *SCSIResponse) DataSegment() []byte   { return p.Data }
 func (p *SCSIResponse) MarshalBHS() ([BHSLength]byte, error) {
 	var bhs [BHSLength]byte
 	p.Header.OpCode_ = OpSCSIResponse
-	p.Header.marshalHeader(bhs[:])
+	if err := p.Header.marshalHeader(bhs[:]); err != nil {
+		return bhs, err
+	}
 	if p.BidiOverflow {
 		bhs[1] |= 0x10
 	}
@@ -114,7 +118,9 @@ func (p *TaskMgmtResp) DataSegment() []byte   { return nil }
 func (p *TaskMgmtResp) MarshalBHS() ([BHSLength]byte, error) {
 	var bhs [BHSLength]byte
 	p.Header.OpCode_ = OpTaskMgmtResp
-	p.Header.marshalHeader(bhs[:])
+	if err := p.Header.marshalHeader(bhs[:]); err != nil {
+		return bhs, err
+	}
 	bhs[2] = p.Response
 	binary.BigEndian.PutUint32(bhs[24:28], p.StatSN)
 	binary.BigEndian.PutUint32(bhs[28:32], p.ExpCmdSN)
@@ -154,7 +160,9 @@ func (p *LoginResp) DataSegment() []byte   { return p.Data }
 func (p *LoginResp) MarshalBHS() ([BHSLength]byte, error) {
 	var bhs [BHSLength]byte
 	p.Header.OpCode_ = OpLoginResp
-	p.Header.marshalHeader(bhs[:])
+	if err := p.Header.marshalHeader(bhs[:]); err != nil {
+		return bhs, err
+	}
 	bhs[1] = 0
 	if p.Transit {
 		bhs[1] |= 0x80
@@ -209,7 +217,9 @@ func (p *TextResp) DataSegment() []byte   { return p.Data }
 func (p *TextResp) MarshalBHS() ([BHSLength]byte, error) {
 	var bhs [BHSLength]byte
 	p.Header.OpCode_ = OpTextResp
-	p.Header.marshalHeader(bhs[:])
+	if err := p.Header.marshalHeader(bhs[:]); err != nil {
+		return bhs, err
+	}
 	if p.Continue {
 		bhs[1] |= 0x40
 	}
@@ -252,7 +262,9 @@ func (p *DataIn) DataSegment() []byte   { return p.Data }
 func (p *DataIn) MarshalBHS() ([BHSLength]byte, error) {
 	var bhs [BHSLength]byte
 	p.Header.OpCode_ = OpDataIn
-	p.Header.marshalHeader(bhs[:])
+	if err := p.Header.marshalHeader(bhs[:]); err != nil {
+		return bhs, err
+	}
 	if p.Acknowledge {
 		bhs[1] |= 0x40
 	}
@@ -308,7 +320,9 @@ func (p *LogoutResp) DataSegment() []byte   { return nil }
 func (p *LogoutResp) MarshalBHS() ([BHSLength]byte, error) {
 	var bhs [BHSLength]byte
 	p.Header.OpCode_ = OpLogoutResp
-	p.Header.marshalHeader(bhs[:])
+	if err := p.Header.marshalHeader(bhs[:]); err != nil {
+		return bhs, err
+	}
 	bhs[2] = p.Response
 	binary.BigEndian.PutUint32(bhs[24:28], p.StatSN)
 	binary.BigEndian.PutUint32(bhs[28:32], p.ExpCmdSN)
@@ -345,7 +359,9 @@ func (p *R2T) DataSegment() []byte   { return nil }
 func (p *R2T) MarshalBHS() ([BHSLength]byte, error) {
 	var bhs [BHSLength]byte
 	p.Header.OpCode_ = OpR2T
-	p.Header.marshalHeader(bhs[:])
+	if err := p.Header.marshalHeader(bhs[:]); err != nil {
+		return bhs, err
+	}
 	binary.BigEndian.PutUint32(bhs[20:24], p.TargetTransferTag)
 	binary.BigEndian.PutUint32(bhs[24:28], p.StatSN)
 	binary.BigEndian.PutUint32(bhs[28:32], p.ExpCmdSN)
@@ -386,7 +402,9 @@ func (p *AsyncMsg) DataSegment() []byte   { return p.Data }
 func (p *AsyncMsg) MarshalBHS() ([BHSLength]byte, error) {
 	var bhs [BHSLength]byte
 	p.Header.OpCode_ = OpAsyncMsg
-	p.Header.marshalHeader(bhs[:])
+	if err := p.Header.marshalHeader(bhs[:]); err != nil {
+		return bhs, err
+	}
 	binary.BigEndian.PutUint32(bhs[24:28], p.StatSN)
 	binary.BigEndian.PutUint32(bhs[28:32], p.ExpCmdSN)
 	binary.BigEndian.PutUint32(bhs[32:36], p.MaxCmdSN)
@@ -426,7 +444,9 @@ func (p *Reject) DataSegment() []byte   { return p.Data }
 func (p *Reject) MarshalBHS() ([BHSLength]byte, error) {
 	var bhs [BHSLength]byte
 	p.Header.OpCode_ = OpReject
-	p.Header.marshalHeader(bhs[:])
+	if err := p.Header.marshalHeader(bhs[:]); err != nil {
+		return bhs, err
+	}
 	bhs[2] = p.Reason
 	binary.BigEndian.PutUint32(bhs[24:28], p.StatSN)
 	binary.BigEndian.PutUint32(bhs[28:32], p.ExpCmdSN)
