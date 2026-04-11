@@ -110,6 +110,11 @@ type TMFResult struct {
 // the task is aborted via a TMF request.
 var ErrTaskAborted = errors.New("session: task aborted")
 
+// ErrSessionDraining is returned by Submit and SubmitStreaming when a Drain()
+// is in progress. The caller should wait for Drain to complete, then call Close().
+// Concurrent Drain() calls also return this error.
+var ErrSessionDraining = errors.New("session: drain in progress")
+
 // SessionOption configures a Session via the functional options pattern.
 type SessionOption func(*sessionConfig)
 

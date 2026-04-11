@@ -45,6 +45,8 @@ type Session struct {
 	tasks      map[uint32]*task
 	loggedIn   bool // true while session is in full-feature phase
 	recovering bool // true during ERL 0 reconnect, blocks Submit
+	draining   bool         // true while Drain() is active; blocks new Submit calls
+	drainDone  chan struct{} // non-nil when Drain() is waiting; closed when len(tasks)==0
 
 	cancel    context.CancelFunc
 	done      chan struct{}
@@ -126,11 +128,15 @@ func (s *Session) Params() login.NegotiatedParams {
 // will receive exactly one Result when the command completes. Submit
 // blocks if the CmdSN window is full, respecting the context deadline.
 func (s *Session) Submit(ctx context.Context, cmd Command) (<-chan Result, error) {
-	// Reject new commands during ERL 0 recovery.
+	// Reject new commands during ERL 0 recovery or active Drain.
 	s.mu.Lock()
 	if s.recovering {
 		s.mu.Unlock()
 		return nil, ErrSessionRecovering
+	}
+	if s.draining {
+		s.mu.Unlock()
+		return nil, ErrSessionDraining
 	}
 	s.mu.Unlock()
 
@@ -250,6 +256,10 @@ func (s *Session) SubmitStreaming(ctx context.Context, cmd Command) (<-chan Resu
 	if s.recovering {
 		s.mu.Unlock()
 		return nil, nil, ErrSessionRecovering
+	}
+	if s.draining {
+		s.mu.Unlock()
+		return nil, nil, ErrSessionDraining
 	}
 	s.mu.Unlock()
 
@@ -422,6 +432,41 @@ func (s *Session) Close() error {
 		}
 	})
 	return closeErr
+}
+
+// Drain blocks until all in-flight commands complete or ctx expires.
+// While draining, new Submit and SubmitStreaming calls return ErrSessionDraining.
+// After Drain returns, the caller should call Close() for final cleanup.
+// Concurrent Drain calls return ErrSessionDraining without blocking.
+//
+// If Drain times out (ctx expires), the draining flag is cleared so the session
+// can accept new Submit calls. The caller should still call Close() to tear down
+// the session, as the in-flight tasks may be in an indeterminate state.
+func (s *Session) Drain(ctx context.Context) error {
+	s.mu.Lock()
+	if s.draining {
+		s.mu.Unlock()
+		return ErrSessionDraining
+	}
+	if len(s.tasks) == 0 {
+		s.mu.Unlock()
+		return nil
+	}
+	s.draining = true
+	done := make(chan struct{})
+	s.drainDone = done
+	s.mu.Unlock()
+
+	select {
+	case <-done:
+		return nil
+	case <-ctx.Done():
+		s.mu.Lock()
+		s.draining = false
+		s.drainDone = nil
+		s.mu.Unlock()
+		return ctx.Err()
+	}
 }
 
 // Err returns the session-fatal error, if any.
@@ -852,6 +897,12 @@ func (s *Session) cleanupTask(itt uint32) {
 	s.router.Unregister(itt)
 	s.mu.Lock()
 	delete(s.tasks, itt)
+	// Signal Drain() if it is waiting and all tasks have completed.
+	// drainDone is set to nil after close to prevent double-close (T-03-08).
+	if s.draining && len(s.tasks) == 0 && s.drainDone != nil {
+		close(s.drainDone)
+		s.drainDone = nil
+	}
 	s.mu.Unlock()
 }
 

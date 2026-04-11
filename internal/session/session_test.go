@@ -958,7 +958,12 @@ func TestDrainNoTasks(t *testing.T) {
 func TestDrainWaitsForTasks(t *testing.T) {
 	sess, targetConn := newTestSession(t)
 
-	// Submit 3 commands without getting responses yet.
+	// Pre-open the CmdSN window to allow multiple in-flight commands.
+	// Updating the window simulates a target response that raises MaxCmdSN.
+	sess.window.update(1, 10)
+
+	// Submit 3 commands: read their PDUs from the target side so we have their
+	// ITTs, but do NOT send responses yet (tasks remain in-flight).
 	type submitted struct {
 		resultCh <-chan Result
 		itt      uint32
@@ -976,7 +981,7 @@ func TestDrainWaitsForTasks(t *testing.T) {
 		cmds = append(cmds, submitted{resultCh: resultCh, itt: scsiCmd.InitiatorTaskTag})
 	}
 
-	// Start Drain — it should block because tasks are in-flight.
+	// Start Drain — it should block because 3 tasks are still in-flight.
 	drainDone := make(chan error, 1)
 	drainCtx, drainCancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer drainCancel()
@@ -984,7 +989,8 @@ func TestDrainWaitsForTasks(t *testing.T) {
 		drainDone <- sess.Drain(drainCtx)
 	}()
 
-	// Send responses for all 3 tasks with increasing StatSN.
+	// Send responses for all 3 tasks. Each response advances the window so
+	// taskLoop can complete each task and call cleanupTask.
 	for i, c := range cmds {
 		writeSCSIResponsePDU(t, targetConn, &pdu.SCSIResponse{
 			Header:   pdu.Header{InitiatorTaskTag: c.itt},
@@ -999,7 +1005,7 @@ func TestDrainWaitsForTasks(t *testing.T) {
 		}
 	}
 
-	// Drain should return nil now.
+	// Drain should return nil now that all tasks completed.
 	select {
 	case err := <-drainDone:
 		if err != nil {
