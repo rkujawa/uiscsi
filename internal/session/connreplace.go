@@ -158,6 +158,11 @@ func (s *Session) replaceConnection(cause error) error {
 		go s.taskLoop(tk, newPduCh)
 	}
 
+	// Mark recovery complete so Submit() accepts new commands again.
+	s.mu.Lock()
+	s.recovering = false
+	s.mu.Unlock()
+
 	s.cfg.logger.Info("session: ERL 2 connection replacement complete",
 		"tasks_reassigned", len(taskSnapshot))
 	return nil
