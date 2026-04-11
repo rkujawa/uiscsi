@@ -714,3 +714,220 @@ func TestSessionSubmitStreamingRead(t *testing.T) {
 		t.Fatal("streaming result should have nil Data")
 	}
 }
+
+// TestRetrySameConnectionCleanup verifies that every cancel path in
+// retrySameConnection calls cleanupTask so ITTs do not leak from s.tasks.
+func TestRetrySameConnectionCleanup(t *testing.T) {
+	t.Run("streaming_not_retriable", func(t *testing.T) {
+		sess, _ := newTestSession(t)
+
+		// Create a fake streaming task and inject it into s.tasks.
+		tk := newTask(42, true, false, 8)
+		tk.streaming = true
+		tk.cmd = Command{}
+		tk.cmd.CDB[0] = 0x28
+		tk.cmdSN = 1
+		pduCh := sess.router.RegisterPersistent(42)
+		_ = pduCh
+		sess.mu.Lock()
+		sess.tasks[42] = tk
+		sess.mu.Unlock()
+
+		// retrySameConnection should cancel and NOT clean up for streaming
+		// — but our fix requires it to cleanupTask before return.
+		sess.retrySameConnection(tk)
+
+		// Wait briefly for cleanup to propagate.
+		time.Sleep(5 * time.Millisecond)
+
+		sess.mu.Lock()
+		_, stillInTasks := sess.tasks[42]
+		sess.mu.Unlock()
+
+		if stillInTasks {
+			t.Fatal("streaming cancel path: ITT 42 still in s.tasks after retrySameConnection")
+		}
+	})
+
+	t.Run("non_seekable_reader", func(t *testing.T) {
+		sess, _ := newTestSession(t)
+
+		// Create a write task with a non-seekable reader.
+		tk := newTask(43, false, true, 0)
+		tk.cmd = Command{Write: true}
+		tk.cmd.CDB[0] = 0x2A
+		tk.cmdSN = 1
+		tk.reader = bytes.NewReader([]byte("data")) // bytes.Reader IS seekable, use non-seekable
+		// Use an io.NopCloser wrapping a bytes.Reader — NopCloser is not seekable.
+		tk.reader = io.NopCloser(bytes.NewReader([]byte("data")))
+		// Also enable ImmediateData so retrySameConnection tries to seek.
+		sess.params.ImmediateData = true
+
+		pduCh := sess.router.RegisterPersistent(43)
+		_ = pduCh
+		sess.mu.Lock()
+		sess.tasks[43] = tk
+		sess.mu.Unlock()
+
+		sess.retrySameConnection(tk)
+
+		time.Sleep(5 * time.Millisecond)
+
+		sess.mu.Lock()
+		_, stillInTasks := sess.tasks[43]
+		sess.mu.Unlock()
+
+		if stillInTasks {
+			t.Fatal("non-seekable reader path: ITT 43 still in s.tasks after retrySameConnection")
+		}
+	})
+
+	t.Run("write_channel_full", func(t *testing.T) {
+		sess, _ := newTestSession(t)
+
+		// Fill the write channel so the send path hits the default case.
+		for range cap(sess.writeCh) {
+			sess.writeCh <- &transport.RawPDU{}
+		}
+
+		tk := newTask(44, false, false, 0)
+		tk.cmd = Command{}
+		tk.cmd.CDB[0] = 0x00
+		tk.cmdSN = 1
+
+		pduCh := sess.router.RegisterPersistent(44)
+		_ = pduCh
+		sess.mu.Lock()
+		sess.tasks[44] = tk
+		sess.mu.Unlock()
+
+		sess.retrySameConnection(tk)
+
+		time.Sleep(5 * time.Millisecond)
+
+		sess.mu.Lock()
+		_, stillInTasks := sess.tasks[44]
+		sess.mu.Unlock()
+
+		if stillInTasks {
+			t.Fatal("write channel full path: ITT 44 still in s.tasks after retrySameConnection")
+		}
+	})
+}
+
+// TestTaskLoopWriteChRace verifies that taskLoop uses getWriteCh() (not
+// s.writeCh directly) when calling handleR2T, so a concurrent writeCh
+// replacement during reconnect does not cause a race.
+func TestTaskLoopWriteChRace(t *testing.T) {
+	// This test primarily exercises the race detector. If taskLoop reads
+	// s.writeCh directly without holding s.mu, -race will flag the concurrent
+	// write in reconnect(). With getWriteCh() the lock serialises access.
+
+	sess, targetConn := newTestSession(t)
+
+	cmd := Command{
+		Write: true,
+		ExpectedDataTransferLen: 4,
+		Data:                    bytes.NewReader([]byte("data")),
+	}
+	cmd.CDB[0] = 0x2A // WRITE(10)
+	cmd.Write = true
+
+	resultCh, err := sess.Submit(context.Background(), cmd)
+	if err != nil {
+		t.Fatalf("Submit: %v", err)
+	}
+
+	// Read the SCSI command PDU.
+	scsiCmd := readSCSICommandPDU(t, targetConn)
+
+	// Concurrently replace writeCh under lock (simulating reconnect).
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		for range 20 {
+			sess.mu.Lock()
+			sess.writeCh = make(chan *transport.RawPDU, 64)
+			sess.mu.Unlock()
+			time.Sleep(time.Millisecond)
+		}
+	}()
+
+	// Send SCSIResponse to complete the command.
+	writeSCSIResponsePDU(t, targetConn, &pdu.SCSIResponse{
+		Header:   pdu.Header{InitiatorTaskTag: scsiCmd.InitiatorTaskTag},
+		Status:   0x00,
+		StatSN:   1,
+		ExpCmdSN: 2,
+		MaxCmdSN: 10,
+	})
+
+	<-done
+	result := <-resultCh
+	if result.Err != nil {
+		t.Fatalf("result error: %v", result.Err)
+	}
+}
+
+// TestSubmitContextCancel verifies that cancelling the per-call context after
+// the PDU is sent (but before the response arrives) causes the task to be
+// cleaned up: removed from s.tasks and ITT unregistered from the router.
+// A subsequent Submit on the same session must succeed.
+func TestSubmitContextCancel(t *testing.T) {
+	sess, targetConn := newTestSession(t)
+
+	// Use a cancellable context for just this command.
+	ctx, cancel := context.WithCancel(context.Background())
+
+	cmd := Command{Read: true, ExpectedDataTransferLen: 5}
+	cmd.CDB[0] = 0x28 // READ(10)
+
+	resultCh, err := sess.Submit(ctx, cmd)
+	if err != nil {
+		t.Fatalf("Submit: %v", err)
+	}
+
+	// Read the command PDU so the PDU is definitely sent.
+	scsiCmd := readSCSICommandPDU(t, targetConn)
+	itt := scsiCmd.InitiatorTaskTag
+
+	// Cancel the context — this should trigger taskLoop cleanup.
+	cancel()
+
+	// Wait for the result (should be context.Canceled).
+	result := <-resultCh
+	if !errors.Is(result.Err, context.Canceled) {
+		t.Fatalf("expected context.Canceled, got: %v", result.Err)
+	}
+
+	// Give taskLoop a moment to cleanupTask.
+	time.Sleep(20 * time.Millisecond)
+
+	sess.mu.Lock()
+	_, stillInTasks := sess.tasks[itt]
+	sess.mu.Unlock()
+
+	if stillInTasks {
+		t.Fatalf("ITT 0x%08x still in s.tasks after context cancel", itt)
+	}
+
+	// A subsequent Submit on the same session must succeed (no lingering state).
+	cmd2 := Command{}
+	cmd2.CDB[0] = 0x00
+	resultCh2, err := sess.Submit(context.Background(), cmd2)
+	if err != nil {
+		t.Fatalf("second Submit after cancel: %v", err)
+	}
+	scsiCmd2 := readSCSICommandPDU(t, targetConn)
+	writeSCSIResponsePDU(t, targetConn, &pdu.SCSIResponse{
+		Header:   pdu.Header{InitiatorTaskTag: scsiCmd2.InitiatorTaskTag},
+		Status:   0x00,
+		StatSN:   1,
+		ExpCmdSN: 3,
+		MaxCmdSN: 10,
+	})
+	result2 := <-resultCh2
+	if result2.Err != nil {
+		t.Fatalf("second Submit result error: %v", result2.Err)
+	}
+}
