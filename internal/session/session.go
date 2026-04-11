@@ -385,10 +385,6 @@ func (s *Session) SubmitStreaming(ctx context.Context, cmd Command) (<-chan Resu
 func (s *Session) Close() error {
 	var closeErr error
 	s.closeOnce.Do(func() {
-		// Notify observers before teardown so they see the transition.
-		// Called before acquiring s.mu to prevent deadlock per fireStateChange contract.
-		s.fireStateChange(SessionClosed)
-
 		// Attempt graceful logout if still logged in.
 		s.mu.Lock()
 		wasLoggedIn := s.loggedIn
@@ -458,6 +454,11 @@ func (s *Session) Close() error {
 		if wg != nil {
 			wg.Wait() // deterministic: all 4 pump goroutines exited before Close returns
 		}
+
+		// Notify observers after all pumps have exited so they receive
+		// SessionClosed only when the session is fully torn down.
+		// Called after wg.Wait() and outside s.mu per fireStateChange contract.
+		s.fireStateChange(SessionClosed)
 	})
 	return closeErr
 }
