@@ -80,7 +80,12 @@ func WithDataDigest(prefs ...string) Option {
 	}
 }
 
-// WithLogger sets the slog.Logger for both session and login diagnostics.
+// WithLogger sets the [*slog.Logger] used for session and login diagnostics.
+//
+// When WithLogger is not called, the session uses [slog.Default]. To
+// suppress all library output, pass a logger backed by [io.Discard]:
+//
+//	slog.New(slog.NewTextHandler(io.Discard, nil))
 func WithLogger(l *slog.Logger) Option {
 	return func(c *dialConfig) {
 		c.loginOpts = append(c.loginOpts, login.WithLoginLogger(l))
@@ -88,7 +93,18 @@ func WithLogger(l *slog.Logger) Option {
 	}
 }
 
-// WithKeepaliveInterval sets the keepalive ping interval.
+// WithKeepaliveInterval sets the NOP-Out keepalive ping interval.
+// The session sends NOP-Out PDUs at this interval to detect dead
+// connections. If no NOP-In reply arrives within [WithKeepaliveTimeout]
+// (default 5s), the connection is considered lost and ERL 0 reconnect
+// begins.
+//
+// Recommended values:
+//   - LTO drives (fast networks): 30s (default)
+//   - DDS-4 drives (slow links, ~6 MB/s): 60s (reduces NOP overhead)
+//   - High-latency WAN iSCSI: 120s
+//
+// A zero value uses the default (30 seconds).
 //
 // deadcode: retained — part of the public iSCSI initiator API for external consumers.
 func WithKeepaliveInterval(d time.Duration) Option {
@@ -134,13 +150,37 @@ func WithPDUHook(h func(context.Context, PDUDirection, []byte)) Option {
 	}
 }
 
-// WithMetricsHook registers a metrics callback.
+// WithMetricsHook registers a callback invoked for each [MetricEvent].
+// Events include PDU send/receive counts, byte counts, and per-command
+// completion latency (via [MetricCommandComplete] events with the
+// [MetricEvent.Latency] field). The hook is called from internal
+// goroutines and MUST NOT block.
 //
 // deadcode: retained — part of the public iSCSI initiator API for external consumers.
 func WithMetricsHook(h func(MetricEvent)) Option {
 	return func(c *dialConfig) {
 		c.sessionOpts = append(c.sessionOpts, session.WithMetricsHook(func(me session.MetricEvent) {
 			h(convertMetricEvent(me))
+		}))
+	}
+}
+
+// WithStateChangeHook registers a callback invoked when the session
+// transitions between lifecycle states. The hook receives the new
+// [SessionState] value. State transitions are:
+//
+//   - [SessionFullFeature]: login complete, session ready for commands
+//   - [SessionReconnecting]: connection lost, ERL 0 reconnect started
+//   - [SessionFullFeature]: reconnect succeeded, commands resume
+//   - [SessionClosed]: session permanently closed
+//
+// The hook is called from internal goroutines and MUST NOT block or
+// call back into the session (Submit, Close, etc.) — doing so risks
+// deadlock. The hook MAY be called concurrently.
+func WithStateChangeHook(h func(SessionState)) Option {
+	return func(c *dialConfig) {
+		c.sessionOpts = append(c.sessionOpts, session.WithStateChangeHook(func(s session.SessionState) {
+			h(SessionState(s))
 		}))
 	}
 }

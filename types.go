@@ -198,6 +198,29 @@ const (
 	PDUReceive PDUDirection = PDUDirection(session.PDUReceive)
 )
 
+// SessionState represents the lifecycle state of an iSCSI session.
+type SessionState uint8
+
+// Session state constants, mirroring internal session values.
+const (
+	// SessionLogin indicates login negotiation is in progress.
+	SessionLogin SessionState = SessionState(session.SessionLogin)
+	// SessionFullFeature indicates the session is in full-feature phase
+	// and accepts SCSI commands.
+	SessionFullFeature SessionState = SessionState(session.SessionFullFeature)
+	// SessionReconnecting indicates an ERL 0 reconnect is in progress.
+	// Commands submitted during this state block until the reconnect
+	// succeeds or the session is closed.
+	SessionReconnecting SessionState = SessionState(session.SessionReconnecting)
+	// SessionClosed indicates the session has been permanently closed.
+	SessionClosed SessionState = SessionState(session.SessionClosed)
+)
+
+// String returns the human-readable name for the session state.
+func (s SessionState) String() string {
+	return session.SessionState(s).String()
+}
+
 // UnmapBlockDescriptor describes a single LBA range to deallocate.
 type UnmapBlockDescriptor struct {
 	LBA    uint64
