@@ -12,10 +12,16 @@ const BHSLength = 48
 // CRITICAL (Pitfall 2): Do not use binary.BigEndian.PutUint32 on bytes 4-7,
 // as that would overwrite the TotalAHSLength field in byte 4.
 //
-// Returns an error if dsLen exceeds the 24-bit maximum (0xFFFFFF).
+// Returns a *ProtocolError if dsLen exceeds the 24-bit maximum (0xFFFFFF).
 func encodeDataSegmentLength(bhs []byte, dsLen uint32) error {
 	if dsLen > 0xFFFFFF {
-		return fmt.Errorf("pdu: DataSegmentLength %d exceeds 24-bit maximum 0xFFFFFF", dsLen)
+		return &ProtocolError{
+			Kind:   OversizedSegment,
+			Op:     "encode",
+			Detail: fmt.Sprintf("DataSegmentLength %d exceeds 24-bit maximum 0xFFFFFF", dsLen),
+			Got:    dsLen,
+			Limit:  0xFFFFFF,
+		}
 	}
 	bhs[5] = byte(dsLen >> 16)
 	bhs[6] = byte(dsLen >> 8)

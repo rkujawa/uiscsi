@@ -151,6 +151,12 @@ func DecodeBHS(bhs [BHSLength]byte) (PDU, error) {
 		p.UnmarshalBHS(bhs)
 		return p, nil
 	default:
-		return nil, fmt.Errorf("pdu: unknown opcode 0x%02x", uint8(opcode))
+		return nil, &ProtocolError{
+			Kind:   BadOpcode,
+			Op:     "decode",
+			Detail: fmt.Sprintf("unknown opcode 0x%02x", uint8(opcode)),
+			Opcode: opcode,
+			Got:    uint32(opcode),
+		}
 	}
 }
