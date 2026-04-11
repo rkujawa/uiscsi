@@ -100,15 +100,15 @@ func TestPoolBHS(t *testing.T) {
 
 func TestPoolBuffer(t *testing.T) {
 	buf := GetBuffer(1024)
-	if len(buf) < 1024 {
-		t.Errorf("GetBuffer(1024): got len %d, want >= 1024", len(buf))
+	if len(*buf) < 1024 {
+		t.Errorf("GetBuffer(1024): got len %d, want >= 1024", len(*buf))
 	}
 	PutBuffer(buf)
 
 	// Large buffer
 	big := GetBuffer(100000)
-	if len(big) < 100000 {
-		t.Errorf("GetBuffer(100000): got len %d, want >= 100000", len(big))
+	if len(*big) < 100000 {
+		t.Errorf("GetBuffer(100000): got len %d, want >= 100000", len(*big))
 	}
 	PutBuffer(big)
 }

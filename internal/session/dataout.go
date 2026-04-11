@@ -22,11 +22,12 @@ func (t *task) sendDataOutBurst(writeCh chan<- *transport.RawPDU,
 
 	for sent < burstLen {
 		chunkSize := min(maxRecvDSL, burstLen-sent)
-		buf := transport.GetBuffer(int(chunkSize))
+		bufBp := transport.GetBuffer(int(chunkSize))
+		buf := (*bufBp)[:chunkSize]
 
 		n, err := io.ReadFull(t.reader, buf[:chunkSize])
 		if err != nil && err != io.ErrUnexpectedEOF {
-			transport.PutBuffer(buf)
+			transport.PutBuffer(bufBp)
 			if n == 0 {
 				return sent, fmt.Errorf("session: read write data: %w", err)
 			}
@@ -35,7 +36,7 @@ func (t *task) sendDataOutBurst(writeCh chan<- *transport.RawPDU,
 			return sent, fmt.Errorf("session: read write data: %w", err)
 		}
 		if n == 0 {
-			transport.PutBuffer(buf)
+			transport.PutBuffer(bufBp)
 			break
 		}
 
@@ -56,13 +57,22 @@ func (t *task) sendDataOutBurst(writeCh chan<- *transport.RawPDU,
 
 		bhs, encErr := dout.MarshalBHS()
 		if encErr != nil {
-			transport.PutBuffer(buf)
+			transport.PutBuffer(bufBp)
 			return sent, fmt.Errorf("session: encode DataOut: %w", encErr)
 		}
 
+		// Copy data out of the pool buffer before crossing the goroutine boundary.
+		// WriteRawPDU (called by WritePump) will copy DataSegment into its own
+		// pool buffer, so dsData only needs to live until that copy completes.
+		// The pool buffer is freed here — in the originating goroutine — so
+		// WritePump never touches the pool-owned memory (D-01, T-02-02).
+		dsData := make([]byte, n)
+		copy(dsData, buf[:n])
+		transport.PutBuffer(bufBp)
+
 		raw := &transport.RawPDU{
 			BHS:         bhs,
-			DataSegment: buf[:n],
+			DataSegment: dsData,
 		}
 		if stampDigests != nil {
 			stampDigests(raw)

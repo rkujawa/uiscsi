@@ -68,9 +68,10 @@ func ReadRawPDU(r io.Reader, digestHeader, digestData bool, maxRecvDSL uint32, d
 		return raw, nil
 	}
 
-	payload := GetBuffer(int(remaining))
-	if _, err := io.ReadFull(r, payload[:remaining]); err != nil {
-		PutBuffer(payload)
+	payloadBp := GetBuffer(int(remaining))
+	payload := (*payloadBp)[:remaining]
+	if _, err := io.ReadFull(r, payload); err != nil {
+		PutBuffer(payloadBp)
 		return nil, err
 	}
 
@@ -119,7 +120,7 @@ func ReadRawPDU(r io.Reader, digestHeader, digestData bool, maxRecvDSL uint32, d
 		}
 		expected := digest.HeaderDigest(input)
 		if expected != raw.HeaderDigest {
-			PutBuffer(payload)
+			PutBuffer(payloadBp)
 			return nil, &digest.DigestError{
 				Type:     digest.DigestHeader,
 				Expected: expected,
@@ -130,7 +131,7 @@ func ReadRawPDU(r io.Reader, digestHeader, digestData bool, maxRecvDSL uint32, d
 	if digestData && dsLen > 0 {
 		expected := digest.DataDigest(raw.DataSegment)
 		if expected != raw.DataDigest {
-			PutBuffer(payload)
+			PutBuffer(payloadBp)
 			return nil, &digest.DigestError{
 				Type:     digest.DigestData,
 				Expected: expected,
@@ -139,7 +140,7 @@ func ReadRawPDU(r io.Reader, digestHeader, digestData bool, maxRecvDSL uint32, d
 		}
 	}
 
-	PutBuffer(payload)
+	PutBuffer(payloadBp)
 	return raw, nil
 }
 
@@ -163,8 +164,9 @@ func WriteRawPDU(w io.Writer, p *RawPDU, digestByteOrder ...binary.ByteOrder) er
 		total += 4
 	}
 
-	buf := GetBuffer(int(total))
-	defer PutBuffer(buf)
+	bufBp := GetBuffer(int(total))
+	defer PutBuffer(bufBp)
+	buf := (*bufBp)[:total]
 
 	off := 0
 
