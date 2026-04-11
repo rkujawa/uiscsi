@@ -24,9 +24,10 @@ func (s *Session) replaceConnection(cause error) error {
 	// (context cancel alone does NOT unblock a blocking TCP read).
 	s.mu.Lock()
 	oldWg := s.pumpWg
+	oldConn := s.conn
 	s.mu.Unlock()
 	s.cancel()
-	_ = s.conn.Close()
+	_ = oldConn.Close()
 
 	// Wait for all old pump goroutines to fully exit before replacing session fields.
 	// This replaces the select-on-s.done pattern which only covered dispatchLoop.
