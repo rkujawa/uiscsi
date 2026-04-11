@@ -100,7 +100,7 @@ func TestRetry_RejectCallerReissue(t *testing.T) {
 	t.Cleanup(func() { sess.Close() })
 
 	// First ReadBlocks should fail (Reject cancels the task at ERL=0).
-	_, firstErr := sess.ReadBlocks(ctx, 0, 0, 1, 512)
+	_, firstErr := sess.SCSI().ReadBlocks(ctx, 0, 0, 1, 512)
 	if firstErr == nil {
 		t.Fatal("expected first ReadBlocks to fail after Reject at ERL=0")
 	}
@@ -110,7 +110,7 @@ func TestRetry_RejectCallerReissue(t *testing.T) {
 	time.Sleep(200 * time.Millisecond)
 
 	// Second ReadBlocks should succeed (caller re-issues with new ITT/CmdSN).
-	data, secondErr := sess.ReadBlocks(ctx, 0, 0, 1, 512)
+	data, secondErr := sess.SCSI().ReadBlocks(ctx, 0, 0, 1, 512)
 	if secondErr != nil {
 		t.Fatalf("second ReadBlocks should succeed, got: %v", secondErr)
 	}
@@ -244,7 +244,7 @@ func TestRetry_SameConnectionRetry(t *testing.T) {
 	t.Cleanup(func() { sess.Close() })
 
 	// ReadBlocks should succeed — the initiator retries internally after Reject.
-	data, err := sess.ReadBlocks(ctx, 0, 0, 1, 512)
+	data, err := sess.SCSI().ReadBlocks(ctx, 0, 0, 1, 512)
 	if err != nil {
 		t.Fatalf("ReadBlocks should succeed after same-connection retry, got: %v", err)
 	}
@@ -414,7 +414,7 @@ func TestRetry_ExpStatSNGap(t *testing.T) {
 	t.Cleanup(func() { sess.Close() })
 
 	// First ReadBlocks: should succeed despite jumped StatSN.
-	data, err := sess.ReadBlocks(ctx, 0, 0, 1, 512)
+	data, err := sess.SCSI().ReadBlocks(ctx, 0, 0, 1, 512)
 	if err != nil {
 		t.Fatalf("first ReadBlocks: %v", err)
 	}
@@ -430,7 +430,7 @@ func TestRetry_ExpStatSNGap(t *testing.T) {
 
 	doneCh := make(chan error, 1)
 	go func() {
-		_, err := sess.ReadBlocks(readCtx, 0, 0, 1, 512)
+		_, err := sess.SCSI().ReadBlocks(readCtx, 0, 0, 1, 512)
 		doneCh <- err
 	}()
 

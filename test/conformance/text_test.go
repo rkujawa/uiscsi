@@ -124,7 +124,7 @@ func TestText_Fields(t *testing.T) {
 	t.Cleanup(func() { sess.Close() })
 
 	// Trigger async injection via SCSI command.
-	if err := sess.TestUnitReady(ctx, 0); err != nil {
+	if err := sess.SCSI().TestUnitReady(ctx, 0); err != nil {
 		t.Fatalf("TestUnitReady: %v", err)
 	}
 
@@ -208,7 +208,7 @@ func TestText_ITTUniqueness(t *testing.T) {
 	// Trigger 3 renegotiations sequentially, waiting for each to fully
 	// complete (TextReq sent AND TextResp received) before the next.
 	for i := 0; i < 3; i++ {
-		if err := sess.TestUnitReady(ctx, 0); err != nil {
+		if err := sess.SCSI().TestUnitReady(ctx, 0); err != nil {
 			t.Fatalf("TestUnitReady[%d]: %v", i, err)
 		}
 		// Wait for the TextReq from this renegotiation to appear.
@@ -270,7 +270,7 @@ func TestText_TTTInitial(t *testing.T) {
 	}
 	t.Cleanup(func() { sess.Close() })
 
-	if err := sess.TestUnitReady(ctx, 0); err != nil {
+	if err := sess.SCSI().TestUnitReady(ctx, 0); err != nil {
 		t.Fatalf("TestUnitReady: %v", err)
 	}
 
@@ -430,7 +430,7 @@ func TestText_OtherParams(t *testing.T) {
 	}
 	t.Cleanup(func() { sess.Close() })
 
-	if err := sess.TestUnitReady(ctx, 0); err != nil {
+	if err := sess.SCSI().TestUnitReady(ctx, 0); err != nil {
 		t.Fatalf("TestUnitReady: %v", err)
 	}
 
@@ -495,7 +495,7 @@ func TestText_NegotiationReset(t *testing.T) {
 	t.Cleanup(func() { sess.Close() })
 
 	// Trigger first renegotiation and wait for full completion.
-	if err := sess.TestUnitReady(ctx, 0); err != nil {
+	if err := sess.SCSI().TestUnitReady(ctx, 0); err != nil {
 		t.Fatalf("TestUnitReady[0]: %v", err)
 	}
 	pollTextReqs(t, rec, 1)
@@ -503,7 +503,7 @@ func TestText_NegotiationReset(t *testing.T) {
 	time.Sleep(200 * time.Millisecond)
 
 	// Trigger second renegotiation.
-	if err := sess.TestUnitReady(ctx, 0); err != nil {
+	if err := sess.SCSI().TestUnitReady(ctx, 0); err != nil {
 		t.Fatalf("TestUnitReady[1]: %v", err)
 	}
 	pollTextReqs(t, rec, 2)

@@ -44,7 +44,7 @@ func TestTMF_AbortTask(t *testing.T) {
 	defer cancel()
 
 	// AbortTask with a dummy task tag.
-	result, err := sess.AbortTask(ctx, 0x12345678)
+	result, err := sess.TMF().AbortTask(ctx, 0x12345678)
 	if err != nil {
 		t.Fatalf("AbortTask: %v", err)
 	}
@@ -61,7 +61,7 @@ func TestTMF_LUNReset(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	result, err := sess.LUNReset(ctx, 0)
+	result, err := sess.TMF().LUNReset(ctx, 0)
 	if err != nil {
 		t.Fatalf("LUNReset: %v", err)
 	}
@@ -78,7 +78,7 @@ func TestTMF_TargetWarmReset(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	result, err := sess.TargetWarmReset(ctx)
+	result, err := sess.TMF().TargetWarmReset(ctx)
 	if err != nil {
 		t.Fatalf("TargetWarmReset: %v", err)
 	}

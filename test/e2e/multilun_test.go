@@ -38,7 +38,7 @@ func TestMultiLUN(t *testing.T) {
 	defer sess.Close()
 
 	// Enumerate LUNs.
-	luns, err := sess.ReportLuns(ctx)
+	luns, err := sess.SCSI().ReportLuns(ctx)
 	if err != nil {
 		t.Fatalf("ReportLuns: %v", err)
 	}
@@ -68,14 +68,14 @@ func TestMultiLUN(t *testing.T) {
 	for i, lunID := range expectedLUNs {
 		// Inquiry first — also clears any UNIT ATTENTION condition on
 		// first LUN access (power on / reset).
-		inq, err := sess.Inquiry(ctx, lunID)
+		inq, err := sess.SCSI().Inquiry(ctx, lunID)
 		if err != nil {
 			t.Errorf("Inquiry(LUN %d): %v", lunID, err)
 			continue
 		}
 		t.Logf("LUN %d: VendorID=%q ProductID=%q", lunID, inq.VendorID, inq.ProductID)
 
-		cap, err := sess.ReadCapacity(ctx, lunID)
+		cap, err := sess.SCSI().ReadCapacity(ctx, lunID)
 		if err != nil {
 			t.Errorf("ReadCapacity(LUN %d): %v", lunID, err)
 			continue

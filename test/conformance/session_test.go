@@ -85,7 +85,7 @@ func TestSession_LogoutAfterAsyncEvent1(t *testing.T) {
 	// want to test the behavioral side effect.
 
 	// First SCSI command triggers the AsyncMsg injection.
-	if err := sess.TestUnitReady(ctx, 0); err != nil {
+	if err := sess.SCSI().TestUnitReady(ctx, 0); err != nil {
 		t.Fatalf("TestUnitReady: %v", err)
 	}
 
@@ -161,7 +161,7 @@ func TestSession_LogoutAfterAsyncEvent1(t *testing.T) {
 	time.Sleep(500 * time.Millisecond)
 
 	// Attempting a command on the closed session should fail.
-	cmdErr := sess.TestUnitReady(ctx, 0)
+	cmdErr := sess.SCSI().TestUnitReady(ctx, 0)
 	if cmdErr == nil {
 		t.Error("expected error after async-triggered logout, got nil")
 	}
@@ -212,7 +212,7 @@ func TestSession_CleanLogout(t *testing.T) {
 	}
 
 	// Send a SCSI command to establish sequencing baseline.
-	if err := sess.TestUnitReady(ctx, 0); err != nil {
+	if err := sess.SCSI().TestUnitReady(ctx, 0); err != nil {
 		t.Fatalf("TestUnitReady: %v", err)
 	}
 
@@ -224,7 +224,7 @@ func TestSession_CleanLogout(t *testing.T) {
 	lastSCSICmdSN := scsiCmds[len(scsiCmds)-1].Decoded.(*pdu.SCSICommand).CmdSN
 
 	// Perform explicit voluntary logout.
-	if err := sess.Logout(ctx); err != nil {
+	if err := sess.Protocol().Logout(ctx); err != nil {
 		t.Fatalf("Logout: %v", err)
 	}
 

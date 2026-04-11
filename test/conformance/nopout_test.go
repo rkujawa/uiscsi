@@ -101,7 +101,7 @@ func TestNOPOut_PingResponse(t *testing.T) {
 	t.Cleanup(func() { sess.Close() })
 
 	// First SCSI command triggers NOP-In from target.
-	if err := sess.TestUnitReady(ctx, 0); err != nil {
+	if err := sess.SCSI().TestUnitReady(ctx, 0); err != nil {
 		t.Fatalf("TestUnitReady[0]: %v", err)
 	}
 
@@ -109,7 +109,7 @@ func TestNOPOut_PingResponse(t *testing.T) {
 	time.Sleep(200 * time.Millisecond)
 
 	// Second SCSI command to verify CmdSN is NOT incremented from the NOP-Out.
-	if err := sess.TestUnitReady(ctx, 0); err != nil {
+	if err := sess.SCSI().TestUnitReady(ctx, 0); err != nil {
 		t.Fatalf("TestUnitReady[1]: %v", err)
 	}
 
@@ -248,7 +248,7 @@ func TestNOPOut_ExpStatSNConfirmation(t *testing.T) {
 	t.Cleanup(func() { sess.Close() })
 
 	// Send a SCSI command first to establish CmdSN baseline.
-	if err := sess.TestUnitReady(ctx, 0); err != nil {
+	if err := sess.SCSI().TestUnitReady(ctx, 0); err != nil {
 		t.Fatalf("TestUnitReady: %v", err)
 	}
 
@@ -260,7 +260,7 @@ func TestNOPOut_ExpStatSNConfirmation(t *testing.T) {
 	cmdSNBefore := cmdsBeforeConfirm[len(cmdsBeforeConfirm)-1].Decoded.(*pdu.SCSICommand).CmdSN
 
 	// Trigger ExpStatSN confirmation.
-	if err := sess.SendExpStatSNConfirmation(); err != nil {
+	if err := sess.Protocol().SendExpStatSNConfirmation(); err != nil {
 		t.Fatalf("SendExpStatSNConfirmation: %v", err)
 	}
 
@@ -268,7 +268,7 @@ func TestNOPOut_ExpStatSNConfirmation(t *testing.T) {
 	time.Sleep(200 * time.Millisecond)
 
 	// Send another SCSI command to verify CmdSN was NOT advanced by the NOP-Out.
-	if err := sess.TestUnitReady(ctx, 0); err != nil {
+	if err := sess.SCSI().TestUnitReady(ctx, 0); err != nil {
 		t.Fatalf("TestUnitReady[1]: %v", err)
 	}
 

@@ -42,7 +42,7 @@ func TestDataIntegrity(t *testing.T) {
 	defer sess.Close()
 
 	// Get block size from ReadCapacity.
-	cap, err := sess.ReadCapacity(ctx, 0)
+	cap, err := sess.SCSI().ReadCapacity(ctx, 0)
 	if err != nil {
 		t.Fatalf("ReadCapacity: %v", err)
 	}
@@ -62,12 +62,12 @@ func TestDataIntegrity(t *testing.T) {
 	}
 
 	// Write 8 blocks at LBA 0.
-	if err := sess.WriteBlocks(ctx, 0, 0, numBlocks, blockSize, testData); err != nil {
+	if err := sess.SCSI().WriteBlocks(ctx, 0, 0, numBlocks, blockSize, testData); err != nil {
 		t.Fatalf("WriteBlocks(LBA=0): %v", err)
 	}
 
 	// Read back 8 blocks at LBA 0.
-	readBack, err := sess.ReadBlocks(ctx, 0, 0, numBlocks, blockSize)
+	readBack, err := sess.SCSI().ReadBlocks(ctx, 0, 0, numBlocks, blockSize)
 	if err != nil {
 		t.Fatalf("ReadBlocks(LBA=0): %v", err)
 	}
@@ -95,11 +95,11 @@ func TestDataIntegrity(t *testing.T) {
 		offsetData[i] = byte(0xAA ^ byte(i&0xFF))
 	}
 
-	if err := sess.WriteBlocks(ctx, 0, offsetLBA, numBlocks, blockSize, offsetData); err != nil {
+	if err := sess.SCSI().WriteBlocks(ctx, 0, offsetLBA, numBlocks, blockSize, offsetData); err != nil {
 		t.Fatalf("WriteBlocks(LBA=%d): %v", offsetLBA, err)
 	}
 
-	readOffset, err := sess.ReadBlocks(ctx, 0, offsetLBA, numBlocks, blockSize)
+	readOffset, err := sess.SCSI().ReadBlocks(ctx, 0, offsetLBA, numBlocks, blockSize)
 	if err != nil {
 		t.Fatalf("ReadBlocks(LBA=%d): %v", offsetLBA, err)
 	}
@@ -146,7 +146,7 @@ func TestStreamExecuteDataIntegrity(t *testing.T) {
 	}
 	defer sess.Close()
 
-	cap, err := sess.ReadCapacity(ctx, 0)
+	cap, err := sess.SCSI().ReadCapacity(ctx, 0)
 	if err != nil {
 		t.Fatalf("ReadCapacity: %v", err)
 	}
@@ -160,7 +160,7 @@ func TestStreamExecuteDataIntegrity(t *testing.T) {
 		testData[i] = byte((i * 7) ^ 0xA5)
 	}
 
-	if err := sess.WriteBlocks(ctx, 0, 0, numBlocks, blockSize, testData); err != nil {
+	if err := sess.SCSI().WriteBlocks(ctx, 0, 0, numBlocks, blockSize, testData); err != nil {
 		t.Fatalf("WriteBlocks: %v", err)
 	}
 
@@ -172,7 +172,7 @@ func TestStreamExecuteDataIntegrity(t *testing.T) {
 	binary.BigEndian.PutUint32(cdb[10:14], numBlocks)
 
 	totalBytes := uint32(numBlocks) * blockSize
-	sr, err := sess.StreamExecute(ctx, 0, cdb, uiscsi.WithDataIn(totalBytes))
+	sr, err := sess.Raw().StreamExecute(ctx, 0, cdb, uiscsi.WithDataIn(totalBytes))
 	if err != nil {
 		t.Fatalf("StreamExecute: %v", err)
 	}
@@ -245,7 +245,7 @@ func TestStreamExecuteWriteRead(t *testing.T) {
 	}
 	defer sess.Close()
 
-	cap, err := sess.ReadCapacity(ctx, 0)
+	cap, err := sess.SCSI().ReadCapacity(ctx, 0)
 	if err != nil {
 		t.Fatalf("ReadCapacity: %v", err)
 	}
@@ -265,7 +265,7 @@ func TestStreamExecuteWriteRead(t *testing.T) {
 	writeCDB[0] = 0x8A // WRITE(16)
 	binary.BigEndian.PutUint32(writeCDB[10:14], numBlocks)
 
-	wsr, err := sess.StreamExecute(ctx, 0, writeCDB,
+	wsr, err := sess.Raw().StreamExecute(ctx, 0, writeCDB,
 		uiscsi.WithDataOut(bytes.NewReader(testData), totalBytes),
 	)
 	if err != nil {
@@ -288,7 +288,7 @@ func TestStreamExecuteWriteRead(t *testing.T) {
 	readCDB[0] = 0x88 // READ(16)
 	binary.BigEndian.PutUint32(readCDB[10:14], numBlocks)
 
-	rsr, err := sess.StreamExecute(ctx, 0, readCDB, uiscsi.WithDataIn(totalBytes))
+	rsr, err := sess.Raw().StreamExecute(ctx, 0, readCDB, uiscsi.WithDataIn(totalBytes))
 	if err != nil {
 		t.Fatalf("StreamExecute read: %v", err)
 	}

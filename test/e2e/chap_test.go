@@ -39,7 +39,7 @@ func TestCHAP(t *testing.T) {
 	defer sess.Close()
 
 	// Verify session is functional.
-	inq, err := sess.Inquiry(ctx, 0)
+	inq, err := sess.SCSI().Inquiry(ctx, 0)
 	if err != nil {
 		t.Fatalf("Inquiry after CHAP login: %v", err)
 	}
@@ -76,7 +76,7 @@ func TestCHAPMutual(t *testing.T) {
 	defer sess.Close()
 
 	// Verify session is functional.
-	inq, err := sess.Inquiry(ctx, 0)
+	inq, err := sess.SCSI().Inquiry(ctx, 0)
 	if err != nil {
 		t.Fatalf("Inquiry after mutual CHAP login: %v", err)
 	}

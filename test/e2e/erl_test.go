@@ -70,14 +70,14 @@ func TestERL1_SNACKRecovery(t *testing.T) {
 	t.Log("ERL 1: negotiation succeeded, verifying session functionality")
 
 	// Verify the session is functional with ERL 1 negotiated.
-	inq, err := sess.Inquiry(ctx, 0)
+	inq, err := sess.SCSI().Inquiry(ctx, 0)
 	if err != nil {
 		t.Fatalf("Inquiry with ERL 1: %v", err)
 	}
 	t.Logf("ERL 1: session functional, VendorID=%q", inq.VendorID)
 
 	// Perform a read to exercise the data path under ERL 1.
-	_, err = sess.ReadBlocks(ctx, 0, 0, 1, 512)
+	_, err = sess.SCSI().ReadBlocks(ctx, 0, 0, 1, 512)
 	if err != nil {
 		t.Fatalf("ReadBlocks with ERL 1: %v", err)
 	}
@@ -127,7 +127,7 @@ func TestERL2_ConnectionReplacement(t *testing.T) {
 	defer sess.Close()
 
 	// Verify session functional before connection kill.
-	if _, err := sess.Inquiry(ctx, 0); err != nil {
+	if _, err := sess.SCSI().Inquiry(ctx, 0); err != nil {
 		t.Fatalf("Inquiry before connection kill (ERL 2): %v", err)
 	}
 	t.Log("ERL 2: session functional before connection kill")
@@ -150,7 +150,7 @@ func TestERL2_ConnectionReplacement(t *testing.T) {
 	// ERL 2 connection replacement or fall back to ERL 0 reconnect.
 	var lastErr error
 	for attempt := range 10 {
-		inq, err := sess.Inquiry(ctx, 0)
+		inq, err := sess.SCSI().Inquiry(ctx, 0)
 		if err == nil {
 			t.Logf("Session recovered after connection kill (ERL 2, attempt %d), VendorID=%q", attempt+1, inq.VendorID)
 			return

@@ -84,7 +84,7 @@ func TestAsync_LogoutRequest(t *testing.T) {
 	}
 
 	// Trigger async injection via first SCSI command.
-	if err := sess.TestUnitReady(ctx, 0); err != nil {
+	if err := sess.SCSI().TestUnitReady(ctx, 0); err != nil {
 		t.Fatalf("TestUnitReady: %v", err)
 	}
 
@@ -123,7 +123,7 @@ func TestAsync_LogoutRequest(t *testing.T) {
 	time.Sleep(500 * time.Millisecond)
 
 	// NO-NEW-COMMANDS: after async-triggered logout, commands must fail.
-	cmdErr := sess.TestUnitReady(ctx, 0)
+	cmdErr := sess.SCSI().TestUnitReady(ctx, 0)
 	if cmdErr == nil {
 		t.Error("expected error after async-triggered logout, got nil")
 	}
@@ -197,7 +197,7 @@ func TestAsync_ConnectionDrop(t *testing.T) {
 	t.Cleanup(func() { sess.Close() })
 
 	// Trigger async injection.
-	if err := sess.TestUnitReady(ctx, 0); err != nil {
+	if err := sess.SCSI().TestUnitReady(ctx, 0); err != nil {
 		t.Fatalf("TestUnitReady: %v", err)
 	}
 
@@ -225,7 +225,7 @@ func TestAsync_ConnectionDrop(t *testing.T) {
 	cmdCtx, cmdCancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cmdCancel()
 
-	cmdErr := sess.TestUnitReady(cmdCtx, 0)
+	cmdErr := sess.SCSI().TestUnitReady(cmdCtx, 0)
 	if cmdErr == nil {
 		t.Error("expected error after connection drop async event, got nil")
 	}
@@ -297,7 +297,7 @@ func TestAsync_SessionDrop(t *testing.T) {
 	t.Cleanup(func() { sess.Close() })
 
 	// Trigger async injection.
-	if err := sess.TestUnitReady(ctx, 0); err != nil {
+	if err := sess.SCSI().TestUnitReady(ctx, 0); err != nil {
 		t.Fatalf("TestUnitReady: %v", err)
 	}
 
@@ -324,7 +324,7 @@ func TestAsync_SessionDrop(t *testing.T) {
 	cmdCtx, cmdCancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cmdCancel()
 
-	cmdErr := sess.TestUnitReady(cmdCtx, 0)
+	cmdErr := sess.SCSI().TestUnitReady(cmdCtx, 0)
 	if cmdErr == nil {
 		t.Error("expected error after session drop async event, got nil")
 	}
@@ -399,7 +399,7 @@ func TestAsync_NegotiationRequest(t *testing.T) {
 	t.Cleanup(func() { sess.Close() })
 
 	// Record CmdSN from the initial SCSI command.
-	if err := sess.TestUnitReady(ctx, 0); err != nil {
+	if err := sess.SCSI().TestUnitReady(ctx, 0); err != nil {
 		t.Fatalf("TestUnitReady (initial): %v", err)
 	}
 
@@ -488,7 +488,7 @@ func TestAsync_NegotiationRequest(t *testing.T) {
 	// Allow renegotiation to complete.
 	time.Sleep(1 * time.Second)
 
-	if err := sess.TestUnitReady(ctx, 0); err != nil {
+	if err := sess.SCSI().TestUnitReady(ctx, 0); err != nil {
 		t.Fatalf("TestUnitReady (post-renegotiation): %v", err)
 	}
 }

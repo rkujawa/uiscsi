@@ -49,11 +49,11 @@ func TestDigests(t *testing.T) {
 		testData[i] = byte(i & 0xFF)
 	}
 
-	if err := sess.WriteBlocks(ctx, 0, 0, 1, blockSize, testData); err != nil {
+	if err := sess.SCSI().WriteBlocks(ctx, 0, 0, 1, blockSize, testData); err != nil {
 		t.Fatalf("WriteBlocks with digests: %v", err)
 	}
 
-	readBack, err := sess.ReadBlocks(ctx, 0, 0, 1, blockSize)
+	readBack, err := sess.SCSI().ReadBlocks(ctx, 0, 0, 1, blockSize)
 	if err != nil {
 		t.Fatalf("ReadBlocks with digests: %v", err)
 	}
@@ -90,7 +90,7 @@ func TestDigest_HeaderOnly(t *testing.T) {
 	}
 	defer sess.Close()
 
-	cap, err := sess.ReadCapacity(ctx, 0)
+	cap, err := sess.SCSI().ReadCapacity(ctx, 0)
 	if err != nil {
 		t.Fatalf("ReadCapacity: %v", err)
 	}
@@ -102,11 +102,11 @@ func TestDigest_HeaderOnly(t *testing.T) {
 		testData[i] = byte(i % 199)
 	}
 
-	if err := sess.WriteBlocks(ctx, 0, 0, numBlocks, blockSize, testData); err != nil {
+	if err := sess.SCSI().WriteBlocks(ctx, 0, 0, numBlocks, blockSize, testData); err != nil {
 		t.Fatalf("WriteBlocks with header-only digest: %v", err)
 	}
 
-	readBack, err := sess.ReadBlocks(ctx, 0, 0, numBlocks, blockSize)
+	readBack, err := sess.SCSI().ReadBlocks(ctx, 0, 0, numBlocks, blockSize)
 	if err != nil {
 		t.Fatalf("ReadBlocks with header-only digest: %v", err)
 	}
@@ -143,7 +143,7 @@ func TestDigest_DataOnly(t *testing.T) {
 	}
 	defer sess.Close()
 
-	cap, err := sess.ReadCapacity(ctx, 0)
+	cap, err := sess.SCSI().ReadCapacity(ctx, 0)
 	if err != nil {
 		t.Fatalf("ReadCapacity: %v", err)
 	}
@@ -155,11 +155,11 @@ func TestDigest_DataOnly(t *testing.T) {
 		testData[i] = byte(i % 199)
 	}
 
-	if err := sess.WriteBlocks(ctx, 0, 0, numBlocks, blockSize, testData); err != nil {
+	if err := sess.SCSI().WriteBlocks(ctx, 0, 0, numBlocks, blockSize, testData); err != nil {
 		t.Fatalf("WriteBlocks with data-only digest: %v", err)
 	}
 
-	readBack, err := sess.ReadBlocks(ctx, 0, 0, numBlocks, blockSize)
+	readBack, err := sess.SCSI().ReadBlocks(ctx, 0, 0, numBlocks, blockSize)
 	if err != nil {
 		t.Fatalf("ReadBlocks with data-only digest: %v", err)
 	}

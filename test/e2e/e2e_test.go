@@ -71,7 +71,7 @@ func TestBasicConnectivity(t *testing.T) {
 	defer sess.Close()
 
 	// Step 3: Inquiry.
-	inq, err := sess.Inquiry(ctx, 0)
+	inq, err := sess.SCSI().Inquiry(ctx, 0)
 	if err != nil {
 		t.Fatalf("Inquiry: %v", err)
 	}
@@ -81,7 +81,7 @@ func TestBasicConnectivity(t *testing.T) {
 	t.Logf("Inquiry: VendorID=%q ProductID=%q", inq.VendorID, inq.ProductID)
 
 	// Step 4: ReadCapacity.
-	cap, err := sess.ReadCapacity(ctx, 0)
+	cap, err := sess.SCSI().ReadCapacity(ctx, 0)
 	if err != nil {
 		t.Fatalf("ReadCapacity: %v", err)
 	}
@@ -97,7 +97,7 @@ func TestBasicConnectivity(t *testing.T) {
 	t.Logf("ReadCapacity: LBA=%d BlockSize=%d", cap.LBA, cap.BlockSize)
 
 	// Step 5: TestUnitReady.
-	if err := sess.TestUnitReady(ctx, 0); err != nil {
+	if err := sess.SCSI().TestUnitReady(ctx, 0); err != nil {
 		t.Fatalf("TestUnitReady: %v", err)
 	}
 

@@ -41,7 +41,7 @@ func TestSCSICommand_ImmediateDataMatrix(t *testing.T) {
 		})
 
 		data := make([]byte, 512)
-		if err := sess.WriteBlocks(ctx, 0, 0, 1, 512, data); err != nil {
+		if err := sess.SCSI().WriteBlocks(ctx, 0, 0, 1, 512, data); err != nil {
 			t.Fatalf("WriteBlocks: %v", err)
 		}
 
@@ -94,7 +94,7 @@ func TestSCSICommand_ImmediateDataMatrix(t *testing.T) {
 		})
 
 		data := make([]byte, 512)
-		if err := sess.WriteBlocks(ctx, 0, 0, 1, 512, data); err != nil {
+		if err := sess.SCSI().WriteBlocks(ctx, 0, 0, 1, 512, data); err != nil {
 			t.Fatalf("WriteBlocks: %v", err)
 		}
 
@@ -147,7 +147,7 @@ func TestSCSICommand_ImmediateDataMatrix(t *testing.T) {
 		})
 
 		data := make([]byte, 1024)
-		if err := sess.WriteBlocks(ctx, 0, 0, 2, 512, data); err != nil {
+		if err := sess.SCSI().WriteBlocks(ctx, 0, 0, 2, 512, data); err != nil {
 			t.Fatalf("WriteBlocks: %v", err)
 		}
 
@@ -202,7 +202,7 @@ func TestSCSICommand_ImmediateDataMatrix(t *testing.T) {
 
 		// Use EDTL=1024 to match FBL=1024 so unsolicited can complete.
 		data := make([]byte, 1024)
-		if err := sess.WriteBlocks(ctx, 0, 0, 2, 512, data); err != nil {
+		if err := sess.SCSI().WriteBlocks(ctx, 0, 0, 2, 512, data); err != nil {
 			t.Fatalf("WriteBlocks: %v", err)
 		}
 
@@ -261,7 +261,7 @@ func TestSCSICommand_UnsolicitedFBit(t *testing.T) {
 		})
 
 		data := make([]byte, 512)
-		if err := sess.WriteBlocks(ctx, 0, 0, 1, 512, data); err != nil {
+		if err := sess.SCSI().WriteBlocks(ctx, 0, 0, 1, 512, data); err != nil {
 			t.Fatalf("WriteBlocks: %v", err)
 		}
 
@@ -326,7 +326,7 @@ func TestSCSICommand_UnsolicitedFBit(t *testing.T) {
 		})
 
 		data := make([]byte, 1024)
-		if err := sess.WriteBlocks(ctx, 0, 0, 2, 512, data); err != nil {
+		if err := sess.SCSI().WriteBlocks(ctx, 0, 0, 2, 512, data); err != nil {
 			t.Fatalf("WriteBlocks: %v", err)
 		}
 
@@ -485,7 +485,7 @@ func TestSCSICommand_FirstBurstLength(t *testing.T) {
 			for i := range data {
 				data[i] = byte(i % 256)
 			}
-			if err := sess.WriteBlocks(ctx, 0, 0, blocks, 256, data); err != nil {
+			if err := sess.SCSI().WriteBlocks(ctx, 0, 0, blocks, 256, data); err != nil {
 				t.Fatalf("WriteBlocks: %v", err)
 			}
 

@@ -93,7 +93,7 @@ func TestDataOut_DataSN(t *testing.T) {
 	for i := range data {
 		data[i] = byte(i % 256)
 	}
-	if err := sess.WriteBlocks(ctx, 0, 0, 4, 512, data); err != nil {
+	if err := sess.SCSI().WriteBlocks(ctx, 0, 0, 4, 512, data); err != nil {
 		t.Fatalf("WriteBlocks: %v", err)
 	}
 
@@ -188,7 +188,7 @@ func TestDataOut_TTTEcho(t *testing.T) {
 	t.Cleanup(func() { sess.Close() })
 
 	data := make([]byte, 512)
-	if err := sess.WriteBlocks(ctx, 0, 0, 1, 512, data); err != nil {
+	if err := sess.SCSI().WriteBlocks(ctx, 0, 0, 1, 512, data); err != nil {
 		t.Fatalf("WriteBlocks: %v", err)
 	}
 
@@ -280,7 +280,7 @@ func TestDataOut_MaxRecvDSL(t *testing.T) {
 	t.Cleanup(func() { sess.Close() })
 
 	data := make([]byte, 1024)
-	if err := sess.WriteBlocks(ctx, 0, 0, 2, 512, data); err != nil {
+	if err := sess.SCSI().WriteBlocks(ctx, 0, 0, 2, 512, data); err != nil {
 		t.Fatalf("WriteBlocks: %v", err)
 	}
 
@@ -373,7 +373,7 @@ func TestDataOut_FBitSolicited(t *testing.T) {
 	t.Cleanup(func() { sess.Close() })
 
 	data := make([]byte, 1536)
-	if err := sess.WriteBlocks(ctx, 0, 0, 3, 512, data); err != nil {
+	if err := sess.SCSI().WriteBlocks(ctx, 0, 0, 3, 512, data); err != nil {
 		t.Fatalf("WriteBlocks: %v", err)
 	}
 
@@ -460,7 +460,7 @@ func TestDataOut_DataSNPerR2T(t *testing.T) {
 	t.Cleanup(func() { sess.Close() })
 
 	data := make([]byte, 2048)
-	if err := sess.WriteBlocks(ctx, 0, 0, 4, 512, data); err != nil {
+	if err := sess.SCSI().WriteBlocks(ctx, 0, 0, 4, 512, data); err != nil {
 		t.Fatalf("WriteBlocks: %v", err)
 	}
 
@@ -576,7 +576,7 @@ func TestDataOut_BufferOffset(t *testing.T) {
 	t.Cleanup(func() { sess.Close() })
 
 	data := make([]byte, 2048)
-	if err := sess.WriteBlocks(ctx, 0, 0, 4, 512, data); err != nil {
+	if err := sess.SCSI().WriteBlocks(ctx, 0, 0, 4, 512, data); err != nil {
 		t.Fatalf("WriteBlocks: %v", err)
 	}
 
@@ -681,7 +681,7 @@ func TestDataOut_UnsolicitedFirstBurst(t *testing.T) {
 	t.Cleanup(func() { sess.Close() })
 
 	data := make([]byte, 2048)
-	if err := sess.WriteBlocks(ctx, 0, 0, 4, 512, data); err != nil {
+	if err := sess.SCSI().WriteBlocks(ctx, 0, 0, 4, 512, data); err != nil {
 		t.Fatalf("WriteBlocks: %v", err)
 	}
 
@@ -792,7 +792,7 @@ func TestDataOut_NoUnsolicited(t *testing.T) {
 	t.Cleanup(func() { sess.Close() })
 
 	data := make([]byte, 1024)
-	if err := sess.WriteBlocks(ctx, 0, 0, 2, 512, data); err != nil {
+	if err := sess.SCSI().WriteBlocks(ctx, 0, 0, 2, 512, data); err != nil {
 		t.Fatalf("WriteBlocks: %v", err)
 	}
 
@@ -902,7 +902,7 @@ func TestDataOut_FirstBurstLimit(t *testing.T) {
 	t.Cleanup(func() { sess.Close() })
 
 	data := make([]byte, 2048)
-	if err := sess.WriteBlocks(ctx, 0, 0, 4, 512, data); err != nil {
+	if err := sess.SCSI().WriteBlocks(ctx, 0, 0, 4, 512, data); err != nil {
 		t.Fatalf("WriteBlocks: %v", err)
 	}
 
@@ -1026,7 +1026,7 @@ func TestDataOut_FBitUnsolicited(t *testing.T) {
 	t.Cleanup(func() { sess.Close() })
 
 	data := make([]byte, 2048)
-	if err := sess.WriteBlocks(ctx, 0, 0, 4, 512, data); err != nil {
+	if err := sess.SCSI().WriteBlocks(ctx, 0, 0, 4, 512, data); err != nil {
 		t.Fatalf("WriteBlocks: %v", err)
 	}
 

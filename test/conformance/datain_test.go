@@ -79,7 +79,7 @@ func TestDataIn_StatusInFinal(t *testing.T) {
 	}
 	t.Cleanup(func() { sess.Close() })
 
-	data, err := sess.ReadBlocks(ctx, 0, 0, 3, 512)
+	data, err := sess.SCSI().ReadBlocks(ctx, 0, 0, 3, 512)
 	if err != nil {
 		t.Fatalf("Read: %v", err)
 	}
@@ -186,7 +186,7 @@ func TestDataIn_ABitDataACK(t *testing.T) {
 	}
 	t.Cleanup(func() { sess.Close() })
 
-	data, err := sess.ReadBlocks(ctx, 0, 0, 3, 512)
+	data, err := sess.SCSI().ReadBlocks(ctx, 0, 0, 3, 512)
 	if err != nil {
 		t.Fatalf("Read: %v", err)
 	}
@@ -298,7 +298,7 @@ func TestDataIn_ZeroLength(t *testing.T) {
 	}
 	t.Cleanup(func() { sess.Close() })
 
-	data, err := sess.ReadBlocks(ctx, 0, 0, 1, 512)
+	data, err := sess.SCSI().ReadBlocks(ctx, 0, 0, 1, 512)
 	if err != nil {
 		t.Fatalf("Read: %v", err)
 	}
@@ -388,7 +388,7 @@ func TestDataIn_EDTL(t *testing.T) {
 	}
 	t.Cleanup(func() { sess.Close() })
 
-	data, err := sess.ReadBlocks(ctx, 0, 0, 2, 512)
+	data, err := sess.SCSI().ReadBlocks(ctx, 0, 0, 2, 512)
 	if err != nil {
 		t.Fatalf("Read: %v", err)
 	}

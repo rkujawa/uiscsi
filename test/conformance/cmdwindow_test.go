@@ -112,14 +112,14 @@ func TestCmdWindow_ZeroWindow(t *testing.T) {
 	t.Cleanup(func() { sess.Close() })
 
 	// First ReadBlocks: succeeds, response closes the window.
-	if _, err := sess.ReadBlocks(ctx, 0, 0, 1, 512); err != nil {
+	if _, err := sess.SCSI().ReadBlocks(ctx, 0, 0, 1, 512); err != nil {
 		t.Fatalf("first ReadBlocks: %v", err)
 	}
 
 	// Second ReadBlocks in goroutine -- should block because window is closed.
 	done := make(chan error, 1)
 	go func() {
-		_, err := sess.ReadBlocks(ctx, 0, 1, 1, 512)
+		_, err := sess.SCSI().ReadBlocks(ctx, 0, 1, 1, 512)
 		done <- err
 	}()
 
@@ -217,7 +217,7 @@ func TestCmdWindow_LargeWindow(t *testing.T) {
 		wg.Add(1)
 		go func(idx int) {
 			defer wg.Done()
-			_, errs[idx] = sess.ReadBlocks(ctx, 0, uint64(idx), 1, 512)
+			_, errs[idx] = sess.SCSI().ReadBlocks(ctx, 0, uint64(idx), 1, 512)
 		}(i)
 	}
 	wg.Wait()
@@ -319,7 +319,7 @@ func TestCmdWindow_WindowOfOne(t *testing.T) {
 	// Issue 3 sequential ReadBlocks. With window of 1, each must wait
 	// for the prior response before the next command is sent.
 	for i := range 3 {
-		if _, err := sess.ReadBlocks(ctx, 0, uint64(i), 1, 512); err != nil {
+		if _, err := sess.SCSI().ReadBlocks(ctx, 0, uint64(i), 1, 512); err != nil {
 			t.Fatalf("ReadBlocks[%d]: %v", i, err)
 		}
 	}
@@ -507,19 +507,19 @@ func TestCmdWindow_MaxCmdSNInResponse(t *testing.T) {
 	t.Cleanup(func() { sess.Close() })
 
 	// First ReadBlocks: succeeds, window stays open.
-	if _, err := sess.ReadBlocks(ctx, 0, 0, 1, 512); err != nil {
+	if _, err := sess.SCSI().ReadBlocks(ctx, 0, 0, 1, 512); err != nil {
 		t.Fatalf("first ReadBlocks: %v", err)
 	}
 
 	// Second ReadBlocks: succeeds, but response closes the window.
-	if _, err := sess.ReadBlocks(ctx, 0, 1, 1, 512); err != nil {
+	if _, err := sess.SCSI().ReadBlocks(ctx, 0, 1, 1, 512); err != nil {
 		t.Fatalf("second ReadBlocks: %v", err)
 	}
 
 	// Third ReadBlocks in goroutine -- should block because window is closed.
 	done := make(chan error, 1)
 	go func() {
-		_, err := sess.ReadBlocks(ctx, 0, 2, 1, 512)
+		_, err := sess.SCSI().ReadBlocks(ctx, 0, 2, 1, 512)
 		done <- err
 	}()
 

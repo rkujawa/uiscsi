@@ -34,7 +34,7 @@ func ExampleDiscover() {
 	}
 }
 
-func ExampleSession_ReadBlocks() {
+func ExampleSCSIOps_ReadBlocks() {
 	ctx := context.Background()
 	sess, err := uiscsi.Dial(ctx, "192.168.1.100:3260",
 		uiscsi.WithTarget("iqn.2026-03.com.example:storage"),
@@ -44,7 +44,7 @@ func ExampleSession_ReadBlocks() {
 	}
 	defer sess.Close()
 
-	data, err := sess.ReadBlocks(ctx, 0, 0, 1, 512)
+	data, err := sess.SCSI().ReadBlocks(ctx, 0, 0, 1, 512)
 	if err != nil {
 		fmt.Println("read:", err)
 		return
@@ -52,7 +52,7 @@ func ExampleSession_ReadBlocks() {
 	fmt.Printf("read %d bytes\n", len(data))
 }
 
-func ExampleSession_WriteBlocks() {
+func ExampleSCSIOps_WriteBlocks() {
 	// Show write + readback verification pattern.
 	ctx := context.Background()
 	sess, err := uiscsi.Dial(ctx, "192.168.1.100:3260",
@@ -65,12 +65,12 @@ func ExampleSession_WriteBlocks() {
 
 	data := make([]byte, 512)
 	copy(data, []byte("hello iSCSI"))
-	if err := sess.WriteBlocks(ctx, 0, 0, 1, 512, data); err != nil {
+	if err := sess.SCSI().WriteBlocks(ctx, 0, 0, 1, 512, data); err != nil {
 		fmt.Println("write:", err)
 	}
 }
 
-func ExampleSession_Execute() {
+func ExampleRawOps_Execute() {
 	// Raw CDB pass-through: TEST UNIT READY.
 	ctx := context.Background()
 	sess, err := uiscsi.Dial(ctx, "192.168.1.100:3260",
@@ -82,7 +82,7 @@ func ExampleSession_Execute() {
 	defer sess.Close()
 
 	turCDB := []byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00} // TEST UNIT READY
-	result, err := sess.Execute(ctx, 0, turCDB)
+	result, err := sess.Raw().Execute(ctx, 0, turCDB)
 	if err != nil {
 		fmt.Println("execute:", err)
 		return

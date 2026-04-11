@@ -42,7 +42,7 @@ func TestSCSIError_OutOfRangeLBA(t *testing.T) {
 	// Write 1 block of zeroes to LBA 200000, well beyond the 64MB LUN
 	// capacity of 131072 blocks at 512 bytes.
 	oneBlock := make([]byte, 512)
-	err = sess.WriteBlocks(ctx, 0, 200000, 1, 512, oneBlock)
+	err = sess.SCSI().WriteBlocks(ctx, 0, 200000, 1, 512, oneBlock)
 	if err == nil {
 		t.Fatal("expected error for out-of-range LBA, got nil")
 	}
@@ -96,7 +96,7 @@ func TestSCSIError_SenseDataParsing(t *testing.T) {
 	defer sess.Close()
 
 	// Read 1 block from LBA 200000, beyond the 64MB LUN capacity.
-	_, err = sess.ReadBlocks(ctx, 0, 200000, 1, 512)
+	_, err = sess.SCSI().ReadBlocks(ctx, 0, 200000, 1, 512)
 	if err == nil {
 		t.Fatal("expected error for out-of-range LBA read, got nil")
 	}

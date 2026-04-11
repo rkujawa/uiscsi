@@ -42,7 +42,7 @@ func TestErrorRecovery_ConnectionDrop(t *testing.T) {
 	defer sess.Close()
 
 	// Verify session is functional.
-	if _, err := sess.Inquiry(ctx, 0); err != nil {
+	if _, err := sess.SCSI().Inquiry(ctx, 0); err != nil {
 		t.Fatalf("Inquiry before connection drop: %v", err)
 	}
 	t.Log("Session functional before connection drop")
@@ -72,7 +72,7 @@ func TestErrorRecovery_ConnectionDrop(t *testing.T) {
 	// subsequent attempts should succeed once reconnected.
 	var lastErr error
 	for attempt := range 10 {
-		inq, err := sess.Inquiry(reconnCtx, 0)
+		inq, err := sess.SCSI().Inquiry(reconnCtx, 0)
 		if err == nil {
 			t.Logf("Inquiry succeeded after reconnect (attempt %d), VendorID=%q", attempt+1, inq.VendorID)
 			return

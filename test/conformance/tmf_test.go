@@ -118,7 +118,7 @@ func TestTMF_CmdSN(t *testing.T) {
 	}
 	readCh := make(chan readResult, 1)
 	go func() {
-		data, err := sess.ReadBlocks(ctx, 0, 0, 1, 512)
+		data, err := sess.SCSI().ReadBlocks(ctx, 0, 0, 1, 512)
 		readCh <- readResult{data, err}
 	}()
 
@@ -135,7 +135,7 @@ func TestTMF_CmdSN(t *testing.T) {
 	scsiCmdSN := scsiCmd.CmdSN
 
 	// Send AbortTask targeting the stalled task's ITT.
-	_, err = sess.AbortTask(ctx, scsiCmd.InitiatorTaskTag)
+	_, err = sess.TMF().AbortTask(ctx, scsiCmd.InitiatorTaskTag)
 	if err != nil {
 		close(stallCh)
 		t.Fatalf("TMF-01: AbortTask: %v", err)
@@ -211,7 +211,7 @@ func TestTMF_LUNEncoding(t *testing.T) {
 			t.Cleanup(func() { sess.Close() })
 
 			// LUNReset is the simplest LUN-scoped TMF (no stall needed).
-			_, err = sess.LUNReset(ctx, lun)
+			_, err = sess.TMF().LUNReset(ctx, lun)
 			if err != nil {
 				t.Fatalf("TMF-02: LUNReset(LUN=%d): %v", lun, err)
 			}
@@ -338,7 +338,7 @@ func TestTMF_RefCmdSN(t *testing.T) {
 	}
 	readCh := make(chan readResult, 1)
 	go func() {
-		data, err := sess.ReadBlocks(ctx, 0, 0, 1, 512)
+		data, err := sess.SCSI().ReadBlocks(ctx, 0, 0, 1, 512)
 		readCh <- readResult{data, err}
 	}()
 
@@ -355,7 +355,7 @@ func TestTMF_RefCmdSN(t *testing.T) {
 	capturedITT := scsiCmd.InitiatorTaskTag
 
 	// Send AbortTask targeting the captured ITT.
-	_, err = sess.AbortTask(ctx, capturedITT)
+	_, err = sess.TMF().AbortTask(ctx, capturedITT)
 	if err != nil {
 		close(stallCh)
 		t.Fatalf("TMF-03: AbortTask: %v", err)
@@ -511,11 +511,11 @@ func TestTMF_AbortTaskSet_AllTasks(t *testing.T) {
 	readCh1 := make(chan readResult, 1)
 	readCh2 := make(chan readResult, 1)
 	go func() {
-		data, err := sess.ReadBlocks(ctx, 0, 0, 1, 512)
+		data, err := sess.SCSI().ReadBlocks(ctx, 0, 0, 1, 512)
 		readCh1 <- readResult{data, err}
 	}()
 	go func() {
-		data, err := sess.ReadBlocks(ctx, 0, 1, 1, 512)
+		data, err := sess.SCSI().ReadBlocks(ctx, 0, 1, 1, 512)
 		readCh2 <- readResult{data, err}
 	}()
 
@@ -523,7 +523,7 @@ func TestTMF_AbortTaskSet_AllTasks(t *testing.T) {
 	time.Sleep(300 * time.Millisecond)
 
 	// Call AbortTaskSet on LUN 0.
-	result, err := sess.AbortTaskSet(ctx, 0)
+	result, err := sess.TMF().AbortTaskSet(ctx, 0)
 	if err != nil {
 		t.Fatalf("TMF-04: AbortTaskSet: %v", err)
 	}
@@ -666,7 +666,7 @@ func TestTMF_AbortTaskSet_BlocksNew(t *testing.T) {
 	}
 	readCh1 := make(chan readResult, 1)
 	go func() {
-		data, err := sess.ReadBlocks(ctx, 0, 0, 1, 512)
+		data, err := sess.SCSI().ReadBlocks(ctx, 0, 0, 1, 512)
 		readCh1 <- readResult{data, err}
 	}()
 
@@ -676,7 +676,7 @@ func TestTMF_AbortTaskSet_BlocksNew(t *testing.T) {
 	// Call AbortTaskSet in goroutine (will block waiting for TMF response).
 	abortCh := make(chan struct{}, 1)
 	go func() {
-		sess.AbortTaskSet(ctx, 0)
+		sess.TMF().AbortTaskSet(ctx, 0)
 		abortCh <- struct{}{}
 	}()
 
@@ -686,7 +686,7 @@ func TestTMF_AbortTaskSet_BlocksNew(t *testing.T) {
 	// Launch NEW ReadBlocks while AbortTaskSet is pending.
 	readCh2 := make(chan readResult, 1)
 	go func() {
-		data, err := sess.ReadBlocks(ctx, 0, 2, 1, 512)
+		data, err := sess.SCSI().ReadBlocks(ctx, 0, 2, 1, 512)
 		readCh2 <- readResult{data, err}
 	}()
 
@@ -834,7 +834,7 @@ func TestTMF_AbortTaskSet_ResponseAfterClear(t *testing.T) {
 	}
 	readCh := make(chan readResult, 1)
 	go func() {
-		data, err := sess.ReadBlocks(ctx, 0, 0, 1, 512)
+		data, err := sess.SCSI().ReadBlocks(ctx, 0, 0, 1, 512)
 		readCh <- readResult{data, err}
 	}()
 
@@ -842,7 +842,7 @@ func TestTMF_AbortTaskSet_ResponseAfterClear(t *testing.T) {
 	time.Sleep(200 * time.Millisecond)
 
 	// Call AbortTaskSet -- this should complete after the target responds.
-	result, err := sess.AbortTaskSet(ctx, 0)
+	result, err := sess.TMF().AbortTaskSet(ctx, 0)
 	if err != nil {
 		t.Fatalf("TMF-06: AbortTaskSet: %v", err)
 	}

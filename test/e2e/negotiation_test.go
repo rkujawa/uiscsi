@@ -77,7 +77,7 @@ func TestNegotiation_ImmediateDataInitialR2T(t *testing.T) {
 			defer sess.Close()
 
 			// Get block size.
-			cap, err := sess.ReadCapacity(ctx, 0)
+			cap, err := sess.SCSI().ReadCapacity(ctx, 0)
 			if err != nil {
 				t.Fatalf("ReadCapacity: %v", err)
 			}
@@ -93,11 +93,11 @@ func TestNegotiation_ImmediateDataInitialR2T(t *testing.T) {
 				testData[i] = byte(i%251) ^ byte(idx)
 			}
 
-			if err := sess.WriteBlocks(ctx, 0, 0, numBlocks, cap.BlockSize, testData); err != nil {
+			if err := sess.SCSI().WriteBlocks(ctx, 0, 0, numBlocks, cap.BlockSize, testData); err != nil {
 				t.Fatalf("WriteBlocks: %v", err)
 			}
 
-			readBack, err := sess.ReadBlocks(ctx, 0, 0, numBlocks, cap.BlockSize)
+			readBack, err := sess.SCSI().ReadBlocks(ctx, 0, 0, numBlocks, cap.BlockSize)
 			if err != nil {
 				t.Fatalf("ReadBlocks: %v", err)
 			}

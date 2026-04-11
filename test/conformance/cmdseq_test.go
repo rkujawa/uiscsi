@@ -56,7 +56,7 @@ func TestCmdSN_SequentialIncrement(t *testing.T) {
 
 	// Send 5 TEST UNIT READY commands (non-immediate SCSI commands).
 	for i := range 5 {
-		if err := sess.TestUnitReady(ctx, 0); err != nil {
+		if err := sess.SCSI().TestUnitReady(ctx, 0); err != nil {
 			t.Fatalf("TestUnitReady[%d]: %v", i, err)
 		}
 	}
@@ -170,7 +170,7 @@ func TestCmdSN_ImmediateDelivery_NonTMF(t *testing.T) {
 	t.Cleanup(func() { sess.Close() })
 
 	// First SCSI command triggers NOP-In from target.
-	if err := sess.TestUnitReady(ctx, 0); err != nil {
+	if err := sess.SCSI().TestUnitReady(ctx, 0); err != nil {
 		t.Fatalf("TestUnitReady[0]: %v", err)
 	}
 
@@ -178,7 +178,7 @@ func TestCmdSN_ImmediateDelivery_NonTMF(t *testing.T) {
 	time.Sleep(100 * time.Millisecond)
 
 	// Second SCSI command.
-	if err := sess.TestUnitReady(ctx, 0); err != nil {
+	if err := sess.SCSI().TestUnitReady(ctx, 0); err != nil {
 		t.Fatalf("TestUnitReady[1]: %v", err)
 	}
 
@@ -253,17 +253,17 @@ func TestCmdSN_ImmediateDelivery_TMF(t *testing.T) {
 	t.Cleanup(func() { sess.Close() })
 
 	// First SCSI command: CmdSN=N.
-	if err := sess.TestUnitReady(ctx, 0); err != nil {
+	if err := sess.SCSI().TestUnitReady(ctx, 0); err != nil {
 		t.Fatalf("TestUnitReady[0]: %v", err)
 	}
 
 	// LUN Reset (TMF): should be Immediate, does not advance CmdSN.
-	if _, err := sess.LUNReset(ctx, 0); err != nil {
+	if _, err := sess.TMF().LUNReset(ctx, 0); err != nil {
 		t.Fatalf("LUNReset: %v", err)
 	}
 
 	// Second SCSI command: should be CmdSN=N+1 (not N+2).
-	if err := sess.TestUnitReady(ctx, 0); err != nil {
+	if err := sess.SCSI().TestUnitReady(ctx, 0); err != nil {
 		t.Fatalf("TestUnitReady[1]: %v", err)
 	}
 

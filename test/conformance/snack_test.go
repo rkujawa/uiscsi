@@ -134,7 +134,7 @@ func TestSNACK_DataSNGap(t *testing.T) {
 	}
 	t.Cleanup(func() { sess.Close() })
 
-	data, err := sess.ReadBlocks(ctx, 0, 0, 3, 512)
+	data, err := sess.SCSI().ReadBlocks(ctx, 0, 0, 3, 512)
 	if err != nil {
 		t.Fatalf("ReadBlocks: %v", err)
 	}
@@ -253,7 +253,7 @@ func TestSNACK_DataACKWireFields(t *testing.T) {
 	}
 	t.Cleanup(func() { sess.Close() })
 
-	data, err := sess.ReadBlocks(ctx, 0, 0, 3, 512)
+	data, err := sess.SCSI().ReadBlocks(ctx, 0, 0, 3, 512)
 	if err != nil {
 		t.Fatalf("ReadBlocks: %v", err)
 	}

@@ -199,7 +199,7 @@ func TestExecute_CDBTooLong(t *testing.T) {
 
 	// 17-byte CDB should be rejected immediately.
 	cdb := make([]byte, 17)
-	_, err = sess.Execute(ctx, 0, cdb)
+	_, err = sess.Raw().Execute(ctx, 0, cdb)
 	if err == nil {
 		t.Fatal("expected error for CDB > 16 bytes")
 	}
@@ -208,7 +208,7 @@ func TestExecute_CDBTooLong(t *testing.T) {
 	}
 
 	// Empty CDB should also be rejected.
-	_, err = sess.Execute(ctx, 0, nil)
+	_, err = sess.Raw().Execute(ctx, 0, nil)
 	if err == nil {
 		t.Fatal("expected error for empty CDB")
 	}

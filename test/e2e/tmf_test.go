@@ -40,12 +40,12 @@ func TestTMF_LUNReset(t *testing.T) {
 	defer sess.Close()
 
 	// Verify session is functional before TMF.
-	if _, err := sess.Inquiry(ctx, 0); err != nil {
+	if _, err := sess.SCSI().Inquiry(ctx, 0); err != nil {
 		t.Fatalf("Inquiry before LUNReset: %v", err)
 	}
 
 	// Send LUN Reset.
-	result, err := sess.LUNReset(ctx, 0)
+	result, err := sess.TMF().LUNReset(ctx, 0)
 	if err != nil {
 		t.Fatalf("LUNReset: %v", err)
 	}
@@ -57,7 +57,7 @@ func TestTMF_LUNReset(t *testing.T) {
 	}
 
 	// Verify session still works after LUN Reset.
-	inq, err := sess.Inquiry(ctx, 0)
+	inq, err := sess.SCSI().Inquiry(ctx, 0)
 	if err != nil {
 		t.Fatalf("Inquiry after LUNReset: %v", err)
 	}
@@ -119,7 +119,7 @@ func TestTMF_AbortTask(t *testing.T) {
 	// to capture the ITT and send an AbortTask.
 	errCh := make(chan error, 1)
 	go func() {
-		_, err := sess.ReadBlocks(ctx, 0, 0, 256, 512)
+		_, err := sess.SCSI().ReadBlocks(ctx, 0, 0, 256, 512)
 		errCh <- err
 	}()
 
@@ -140,7 +140,7 @@ func TestTMF_AbortTask(t *testing.T) {
 	}
 
 	// Send AbortTask targeting the captured ITT.
-	result, err := sess.AbortTask(ctx, itt)
+	result, err := sess.TMF().AbortTask(ctx, itt)
 	if err != nil {
 		t.Fatalf("AbortTask: %v", err)
 	}
@@ -164,7 +164,7 @@ func TestTMF_AbortTask(t *testing.T) {
 	}
 
 	// Verify session still functional after abort.
-	inq, err := sess.Inquiry(ctx, 0)
+	inq, err := sess.SCSI().Inquiry(ctx, 0)
 	if err != nil {
 		t.Fatalf("Inquiry after AbortTask: %v", err)
 	}
@@ -198,14 +198,14 @@ func TestTMF_TargetWarmReset(t *testing.T) {
 	defer sess.Close()
 
 	// Verify session functional before TMF.
-	if _, err := sess.Inquiry(ctx, 0); err != nil {
+	if _, err := sess.SCSI().Inquiry(ctx, 0); err != nil {
 		t.Fatalf("Inquiry before TargetWarmReset: %v", err)
 	}
 
 	// Send TargetWarmReset. Per RFC 7143 Section 11.5.1, the target may
 	// drop the session in response to a warm reset, which means the TMF
 	// response itself may not arrive cleanly.
-	result, err := sess.TargetWarmReset(ctx)
+	result, err := sess.TMF().TargetWarmReset(ctx)
 	if err != nil {
 		t.Logf("TargetWarmReset returned error (session may have been killed): %v", err)
 		// This is expected behavior per RFC 7143 Section 11.5.1.
@@ -217,7 +217,7 @@ func TestTMF_TargetWarmReset(t *testing.T) {
 	}
 
 	// Attempt a command on the same session (may fail if reset killed it).
-	_, postErr := sess.Inquiry(ctx, 0)
+	_, postErr := sess.SCSI().Inquiry(ctx, 0)
 	if postErr != nil {
 		t.Logf("Post-reset Inquiry failed (session killed, expected): %v", postErr)
 	}

@@ -50,7 +50,7 @@ func TestRead_SingleBlock(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	data, err := sess.ReadBlocks(ctx, 0, 0, 1, 512)
+	data, err := sess.SCSI().ReadBlocks(ctx, 0, 0, 1, 512)
 	if err != nil {
 		t.Fatalf("ReadBlocks: %v", err)
 	}
@@ -77,7 +77,7 @@ func TestRead_MultiBlock(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	data, err := sess.ReadBlocks(ctx, 0, 0, 4, 512)
+	data, err := sess.SCSI().ReadBlocks(ctx, 0, 0, 4, 512)
 	if err != nil {
 		t.Fatalf("ReadBlocks: %v", err)
 	}
@@ -114,7 +114,7 @@ func TestWrite_SingleBlock(t *testing.T) {
 		writeData[i] = byte(i % 256)
 	}
 
-	if err := sess.WriteBlocks(ctx, 0, 0, 1, 512, writeData); err != nil {
+	if err := sess.SCSI().WriteBlocks(ctx, 0, 0, 1, 512, writeData); err != nil {
 		t.Fatalf("WriteBlocks: %v", err)
 	}
 }
@@ -128,7 +128,7 @@ func TestInquiry(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	inq, err := sess.Inquiry(ctx, 0)
+	inq, err := sess.SCSI().Inquiry(ctx, 0)
 	if err != nil {
 		t.Fatalf("Inquiry: %v", err)
 	}
@@ -149,7 +149,7 @@ func TestReadCapacity(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	cap, err := sess.ReadCapacity(ctx, 0)
+	cap, err := sess.SCSI().ReadCapacity(ctx, 0)
 	if err != nil {
 		t.Fatalf("ReadCapacity: %v", err)
 	}
@@ -172,7 +172,7 @@ func TestTestUnitReady(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	if err := sess.TestUnitReady(ctx, 0); err != nil {
+	if err := sess.SCSI().TestUnitReady(ctx, 0); err != nil {
 		t.Fatalf("TestUnitReady: %v", err)
 	}
 }
@@ -186,7 +186,7 @@ func TestReportLuns(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	luns, err := sess.ReportLuns(ctx)
+	luns, err := sess.SCSI().ReportLuns(ctx)
 	if err != nil {
 		t.Fatalf("ReportLuns: %v", err)
 	}
@@ -206,7 +206,7 @@ func TestExecute_RawCDB(t *testing.T) {
 	// TEST UNIT READY CDB: opcode 0x00, 6 bytes.
 	turCDB := []byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00}
 
-	result, err := sess.Execute(ctx, 0, turCDB)
+	result, err := sess.Raw().Execute(ctx, 0, turCDB)
 	if err != nil {
 		t.Fatalf("Execute: %v", err)
 	}
@@ -230,7 +230,7 @@ func TestExecute_RawRead(t *testing.T) {
 	readCDB := make([]byte, 10)
 	readCDB[0] = 0x28 // READ(10) opcode
 
-	result, err := sess.Execute(ctx, 0, readCDB, uiscsi.WithDataIn(512))
+	result, err := sess.Raw().Execute(ctx, 0, readCDB, uiscsi.WithDataIn(512))
 	if err != nil {
 		t.Fatalf("Execute: %v", err)
 	}
@@ -258,7 +258,7 @@ func TestStreamExecuteRead(t *testing.T) {
 	// LBA = 0 (bytes 2-9), transfer length = 1 block (bytes 10-13)
 	cdb[13] = 1
 
-	sr, err := sess.StreamExecute(ctx, 0, cdb, uiscsi.WithDataIn(512))
+	sr, err := sess.Raw().StreamExecute(ctx, 0, cdb, uiscsi.WithDataIn(512))
 	if err != nil {
 		t.Fatalf("StreamExecute: %v", err)
 	}
@@ -291,7 +291,7 @@ func TestContextTimeout(t *testing.T) {
 	// Let the context expire.
 	<-ctx.Done()
 
-	_, err := sess.ReadBlocks(ctx, 0, 0, 1, 512)
+	_, err := sess.SCSI().ReadBlocks(ctx, 0, 0, 1, 512)
 	if err == nil {
 		t.Fatal("expected error for expired context")
 	}

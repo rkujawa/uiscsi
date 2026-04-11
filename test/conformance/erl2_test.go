@@ -115,7 +115,7 @@ func TestERL2_ConnectionReassignment(t *testing.T) {
 	}
 	readCh := make(chan readResult, 1)
 	go func() {
-		data, err := sess.ReadBlocks(ctx, 0, 0, 1, 512)
+		data, err := sess.SCSI().ReadBlocks(ctx, 0, 0, 1, 512)
 		readCh <- readResult{data, err}
 	}()
 
@@ -268,7 +268,7 @@ func TestERL2_TaskReassign(t *testing.T) {
 	}
 	readCh := make(chan readResult, 1)
 	go func() {
-		data, err := sess.ReadBlocks(ctx, 0, 0, 1, 512)
+		data, err := sess.SCSI().ReadBlocks(ctx, 0, 0, 1, 512)
 		readCh <- readResult{data, err}
 	}()
 

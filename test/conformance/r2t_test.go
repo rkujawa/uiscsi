@@ -89,7 +89,7 @@ func TestR2T_SinglePDU(t *testing.T) {
 
 	// Write 512 bytes (1 block of 512).
 	data := bytes.Repeat([]byte{0xAB}, 512)
-	if err := sess.WriteBlocks(ctx, 0, 0, 1, 512, data); err != nil {
+	if err := sess.SCSI().WriteBlocks(ctx, 0, 0, 1, 512, data); err != nil {
 		t.Fatalf("WriteBlocks: %v", err)
 	}
 
@@ -193,7 +193,7 @@ func TestR2T_MultiPDU(t *testing.T) {
 
 	// Write 1024 bytes (2 blocks of 512).
 	data := bytes.Repeat([]byte{0xCD}, 1024)
-	if err := sess.WriteBlocks(ctx, 0, 0, 2, 512, data); err != nil {
+	if err := sess.SCSI().WriteBlocks(ctx, 0, 0, 2, 512, data); err != nil {
 		t.Fatalf("WriteBlocks: %v", err)
 	}
 
@@ -330,7 +330,7 @@ func TestR2T_MultipleR2T(t *testing.T) {
 
 	// Write 1024 bytes (2 blocks of 512).
 	data := bytes.Repeat([]byte{0xEF}, 1024)
-	if err := sess.WriteBlocks(ctx, 0, 0, 2, 512, data); err != nil {
+	if err := sess.SCSI().WriteBlocks(ctx, 0, 0, 2, 512, data); err != nil {
 		t.Fatalf("WriteBlocks: %v", err)
 	}
 
@@ -475,10 +475,10 @@ func TestR2T_ParallelCommand(t *testing.T) {
 	// Sequential execution avoids mock target serialization issues while
 	// still validating that each command's Data-Out PDUs are correctly isolated.
 	data := bytes.Repeat([]byte{0xBB}, 512)
-	if err := sess.WriteBlocks(ctx, 0, 0, 1, 512, data); err != nil {
+	if err := sess.SCSI().WriteBlocks(ctx, 0, 0, 1, 512, data); err != nil {
 		t.Fatalf("WriteBlocks[0]: %v", err)
 	}
-	if err := sess.WriteBlocks(ctx, 0, 1, 1, 512, data); err != nil {
+	if err := sess.SCSI().WriteBlocks(ctx, 0, 1, 1, 512, data); err != nil {
 		t.Fatalf("WriteBlocks[1]: %v", err)
 	}
 

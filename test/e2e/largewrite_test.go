@@ -39,7 +39,7 @@ func TestLargeWrite_MultiR2T(t *testing.T) {
 	defer sess.Close()
 
 	// Get block size from ReadCapacity.
-	cap, err := sess.ReadCapacity(ctx, 0)
+	cap, err := sess.SCSI().ReadCapacity(ctx, 0)
 	if err != nil {
 		t.Fatalf("ReadCapacity: %v", err)
 	}
@@ -56,11 +56,11 @@ func TestLargeWrite_MultiR2T(t *testing.T) {
 		testData[i] = byte(i % 251) // prime modulus for non-repeating pattern
 	}
 
-	if err := sess.WriteBlocks(ctx, 0, 0, numBlocks, cap.BlockSize, testData); err != nil {
+	if err := sess.SCSI().WriteBlocks(ctx, 0, 0, numBlocks, cap.BlockSize, testData); err != nil {
 		t.Fatalf("WriteBlocks(1MB): %v", err)
 	}
 
-	readBack, err := sess.ReadBlocks(ctx, 0, 0, numBlocks, cap.BlockSize)
+	readBack, err := sess.SCSI().ReadBlocks(ctx, 0, 0, numBlocks, cap.BlockSize)
 	if err != nil {
 		t.Fatalf("ReadBlocks(1MB): %v", err)
 	}

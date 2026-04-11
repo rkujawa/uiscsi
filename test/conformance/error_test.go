@@ -47,7 +47,7 @@ func TestError_SCSICheckCondition(t *testing.T) {
 	}
 	defer sess.Close()
 
-	_, readErr := sess.ReadBlocks(ctx, 0, 0, 1, 512)
+	_, readErr := sess.SCSI().ReadBlocks(ctx, 0, 0, 1, 512)
 	if readErr == nil {
 		t.Fatal("expected error for CHECK CONDITION")
 	}
@@ -101,7 +101,7 @@ func TestError_TransportDrop(t *testing.T) {
 	readCtx, readCancel := context.WithTimeout(ctx, 2*time.Second)
 	defer readCancel()
 
-	_, readErr := sess.ReadBlocks(readCtx, 0, 0, 1, 512)
+	_, readErr := sess.SCSI().ReadBlocks(readCtx, 0, 0, 1, 512)
 	if readErr == nil {
 		t.Fatal("expected error after transport drop")
 	}
@@ -153,7 +153,7 @@ func TestError_BUSY(t *testing.T) {
 	}
 	t.Cleanup(func() { sess.Close() })
 
-	_, readErr := sess.ReadBlocks(ctx, 0, 0, 1, 512)
+	_, readErr := sess.SCSI().ReadBlocks(ctx, 0, 0, 1, 512)
 	if readErr == nil {
 		t.Fatal("expected error for BUSY status")
 	}
@@ -190,7 +190,7 @@ func TestError_ReservationConflict(t *testing.T) {
 	}
 	t.Cleanup(func() { sess.Close() })
 
-	_, readErr := sess.ReadBlocks(ctx, 0, 0, 1, 512)
+	_, readErr := sess.SCSI().ReadBlocks(ctx, 0, 0, 1, 512)
 	if readErr == nil {
 		t.Fatal("expected error for RESERVATION CONFLICT status")
 	}
@@ -237,7 +237,7 @@ func TestError_UnexpectedUnsolicited(t *testing.T) {
 	t.Cleanup(func() { sess.Close() })
 
 	// Use WriteBlocks to trigger the write path (unsolicited data scenario).
-	writeErr := sess.WriteBlocks(ctx, 0, 0, 1, 512, make([]byte, 512))
+	writeErr := sess.SCSI().WriteBlocks(ctx, 0, 0, 1, 512, make([]byte, 512))
 	if writeErr == nil {
 		t.Fatal("expected error for CHECK CONDITION with unexpected unsolicited data")
 	}
@@ -292,7 +292,7 @@ func TestError_NotEnoughUnsolicited(t *testing.T) {
 	}
 	t.Cleanup(func() { sess.Close() })
 
-	writeErr := sess.WriteBlocks(ctx, 0, 0, 1, 512, make([]byte, 512))
+	writeErr := sess.SCSI().WriteBlocks(ctx, 0, 0, 1, 512, make([]byte, 512))
 	if writeErr == nil {
 		t.Fatal("expected error for CHECK CONDITION with not enough unsolicited data")
 	}
@@ -369,7 +369,7 @@ func TestError_CRCErrorSense(t *testing.T) {
 	}
 	t.Cleanup(func() { sess.Close() })
 
-	_, readErr := sess.ReadBlocks(ctx, 0, 0, 1, 512)
+	_, readErr := sess.SCSI().ReadBlocks(ctx, 0, 0, 1, 512)
 	if readErr == nil {
 		t.Fatal("expected error for CHECK CONDITION with CRC error sense")
 	}
@@ -518,7 +518,7 @@ func TestError_SNACKRejectNewCommand(t *testing.T) {
 	// At ERL>=1, Reject triggers same-connection retry with original ITT/CmdSN
 	// (RFC 7143 Section 6.2.1). The SNACK rejection causes the initiator to
 	// retry the original SCSI command transparently. ReadBlocks should succeed.
-	data, firstErr := sess.ReadBlocks(ctx, 0, 0, 1, 512)
+	data, firstErr := sess.SCSI().ReadBlocks(ctx, 0, 0, 1, 512)
 	if firstErr != nil {
 		t.Fatalf("ReadBlocks should succeed after SNACK Reject + same-connection retry, got: %v", firstErr)
 	}
