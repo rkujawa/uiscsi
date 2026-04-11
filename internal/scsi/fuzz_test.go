@@ -8,6 +8,55 @@ import (
 	"github.com/uiscsi/uiscsi/internal/session"
 )
 
+// FuzzSenseData exercises the full ParseSense code path including descriptor
+// iteration without panicking (T-04-09). Seeds cover fixed-format,
+// descriptor-format with Information and Stream Commands descriptors.
+func FuzzSenseData(f *testing.F) {
+	// Fixed format (0x70) — ILLEGAL REQUEST, Invalid field in CDB
+	fixedGood := make([]byte, 18)
+	fixedGood[0] = 0x70 // current fixed
+	fixedGood[2] = 0x05 // ILLEGAL REQUEST
+	fixedGood[7] = 10   // additional sense length
+	fixedGood[12] = 0x24 // ASC: Invalid field in CDB
+	f.Add(fixedGood)
+
+	// Descriptor format (0x72) with Information descriptor (type 0x00)
+	descInfo := []byte{
+		0x72, 0x05, 0x24, 0x00, 0x00, 0x00, 0x00, 12, // header: key=5, ASC=0x24, addlLen=12
+		0x00, 0x0A, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, // Information descriptor
+	}
+	f.Add(descInfo)
+
+	// Descriptor format (0x72) with Stream Commands descriptor (type 0x04, filemark)
+	descStream := []byte{
+		0x72, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 4, // header: NO SENSE, ASC=0x00/ASCQ=0x01
+		0x04, 0x02, 0x00, 0x80, // Stream: filemark=true
+	}
+	f.Add(descStream)
+
+	// Deferred descriptor format (0x73)
+	descDeferred := []byte{
+		0x73, 0x02, 0x04, 0x01, 0x00, 0x00, 0x00, 0x00, // NOT READY, becoming ready
+	}
+	f.Add(descDeferred)
+
+	// Minimal valid fixed format
+	f.Add(make([]byte, 18))
+	// Too short for any format
+	f.Add([]byte{0x70})
+	f.Add([]byte{})
+	// Fixed format with valid bit set
+	fixedValid := make([]byte, 18)
+	fixedValid[0] = 0xF0 // deferred fixed, valid=1
+	fixedValid[2] = 0x03 // MEDIUM ERROR
+	fixedValid[7] = 10
+	f.Add(fixedValid)
+
+	f.Fuzz(func(t *testing.T, data []byte) {
+		ParseSense(data) // must not panic
+	})
+}
+
 // goodResult wraps raw bytes as a session.Result with GOOD status.
 func fuzzResult(data []byte) session.Result {
 	var r *bytes.Reader

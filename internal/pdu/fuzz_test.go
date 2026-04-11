@@ -2,6 +2,51 @@ package pdu
 
 import "testing"
 
+// FuzzPDURoundTrip verifies that any PDU that successfully decodes can
+// re-encode and re-decode to the same opcode (T-04-10). Seeds cover all 18
+// opcodes per RFC-03. The invariant checked: if DecodeBHS succeeds on a BHS,
+// then MarshalBHS + DecodeBHS must produce a PDU with the same opcode.
+func FuzzPDURoundTrip(f *testing.F) {
+	// Seed with one minimal valid BHS per opcode (all 18).
+	allOpcodes := []OpCode{
+		OpNOPOut, OpSCSICommand, OpTaskMgmtReq, OpLoginReq, OpTextReq,
+		OpDataOut, OpLogoutReq, OpSNACKReq, OpNOPIn, OpSCSIResponse,
+		OpTaskMgmtResp, OpLoginResp, OpTextResp, OpDataIn, OpLogoutResp,
+		OpR2T, OpAsyncMsg, OpReject,
+	}
+	for _, op := range allOpcodes {
+		bhs := [BHSLength]byte{}
+		bhs[0] = byte(op)
+		// Set Final bit (byte 1 bit 7) for target opcodes that require it.
+		bhs[1] = 0x80
+		f.Add(bhs[:])
+	}
+
+	f.Fuzz(func(t *testing.T, data []byte) {
+		if len(data) != BHSLength {
+			return
+		}
+		var bhs [BHSLength]byte
+		copy(bhs[:], data)
+		p, err := DecodeBHS(bhs)
+		if err != nil {
+			return // invalid PDU is fine, just no panic
+		}
+		// Round-trip: re-encode and re-decode.
+		encoded, err := p.MarshalBHS()
+		if err != nil {
+			return // encode failure is acceptable for some field combinations
+		}
+		p2, err := DecodeBHS(encoded)
+		if err != nil {
+			t.Fatalf("DecodeBHS failed on re-encoded PDU: %v", err)
+		}
+		if p.Opcode() != p2.Opcode() {
+			t.Fatalf("opcode mismatch after round-trip: %v vs %v", p.Opcode(), p2.Opcode())
+		}
+	})
+}
+
 func FuzzDecodeBHS(f *testing.F) {
 	// Valid opcodes: NOP-Out through Reject.
 	f.Add(make([]byte, BHSLength))                                 // all zeros (NOP-Out)
