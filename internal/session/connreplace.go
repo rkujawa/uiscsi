@@ -18,18 +18,20 @@ import (
 func (s *Session) replaceConnection(cause error) error {
 	s.cfg.logger.Info("session: starting ERL 2 connection replacement", "cause", cause)
 
-	// Step 1: Stop old pumps. Cancel context first, then close connection
-	// to unblock any blocked reads/writes, then wait for goroutines to exit.
+	// Step 1: Stop old pumps. Snapshot old pumpWg first, then cancel context,
+	// then close connection to unblock any blocked reads/writes in pump goroutines.
+	// conn.Close() MUST precede oldWg.Wait() so ReadPump's io.ReadFull unblocks
+	// (context cancel alone does NOT unblock a blocking TCP read).
+	s.mu.Lock()
+	oldWg := s.pumpWg
+	s.mu.Unlock()
 	s.cancel()
 	_ = s.conn.Close()
 
-	// Wait for dispatchLoop to exit (it closes s.done on return).
-	// This ensures all old goroutines are done accessing s.writeCh/s.unsolCh
-	// before we replace them.
-	select {
-	case <-s.done:
-	case <-time.After(5 * time.Second):
-		// Timeout safety -- should not happen but prevents deadlock.
+	// Wait for all old pump goroutines to fully exit before replacing session fields.
+	// This replaces the select-on-s.done pattern which only covered dispatchLoop.
+	if oldWg != nil {
+		oldWg.Wait()
 	}
 
 	// Step 2: Snapshot in-flight tasks (keep them alive, unlike ERL 0 which

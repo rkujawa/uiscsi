@@ -50,14 +50,20 @@ func (s *Session) reconnect(cause error) {
 
 	// Step 1: Stop old pumps by cancelling context and closing old connection.
 	// Closing net.Conn unblocks pending Read/Write in pump goroutines.
-	// Capture old done channel to wait for dispatchLoop to exit before
-	// replacing session fields (prevents data race on s.done, s.unsolCh).
-	oldDone := s.done
+	// Snapshot old pumpWg and wait for all 4 pump goroutines to exit before
+	// replacing session fields (prevents data races on s.conn, s.writeCh,
+	// s.unsolCh, s.done). conn.Close() MUST precede oldWg.Wait() so that
+	// ReadPump's io.ReadFull unblocks (context cancel alone does NOT unblock it).
+	s.mu.Lock()
+	oldWg := s.pumpWg
+	s.mu.Unlock()
 	s.cancel()
 	_ = s.conn.Close()
 
-	// Wait for old dispatchLoop to exit so no goroutine reads replaced fields.
-	<-oldDone
+	// Wait for all old pump goroutines to fully exit before replacing session fields.
+	if oldWg != nil {
+		oldWg.Wait()
+	}
 
 	// Step 2: Snapshot in-flight tasks and clear session state.
 	s.mu.Lock()
@@ -196,11 +202,8 @@ func (s *Session) reconnect(cause error) {
 	s.done = make(chan struct{})
 	s.mu.Unlock()
 
-	// Step 5: Start new pump goroutines.
-	go s.readPumpLoop(newCtx, s.conn, s.unsolCh)
-	go s.writePumpLoop(newCtx, s.conn, s.writeCh)
-	go s.dispatchLoop(newCtx, s.unsolCh, s.done)
-	go s.keepaliveLoop(newCtx)
+	// Step 5: Start new pump goroutines with fresh per-invocation WaitGroup.
+	s.startPumps(newCtx)
 
 	// Step 6: Retry snapshotted tasks.
 	s.retryTasks(newCtx, taskSnapshot)

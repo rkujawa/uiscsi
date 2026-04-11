@@ -47,6 +47,7 @@ type Session struct {
 
 	cancel    context.CancelFunc
 	done      chan struct{}
+	pumpWg    *sync.WaitGroup // tracks all 4 pump goroutines for deterministic Close
 	closeOnce sync.Once
 	err       error
 
@@ -416,7 +417,7 @@ func (s *Session) Close() error {
 		win.close()
 		s.cancel()
 
-		// Cancel all in-flight tasks and capture conn under lock
+		// Cancel all in-flight tasks and capture conn and pumpWg under lock
 		// (conn may be replaced by reconnect goroutine).
 		s.mu.Lock()
 		for itt, tk := range s.tasks {
@@ -425,9 +426,16 @@ func (s *Session) Close() error {
 			delete(s.tasks, itt)
 		}
 		conn := s.conn
+		wg := s.pumpWg // snapshot WG under lock
 		s.mu.Unlock()
 
+		// conn.Close() MUST precede wg.Wait(): ReadPump blocks in io.ReadFull
+		// on the TCP socket; closing the conn returns io.ErrClosedPipe which
+		// exits the read pump loop. Context cancel alone does NOT unblock it.
 		closeErr = conn.Close()
+		if wg != nil {
+			wg.Wait() // deterministic: all 4 pump goroutines exited before Close returns
+		}
 	})
 	return closeErr
 }
@@ -493,16 +501,27 @@ func (s *Session) stampDigests(raw *transport.RawPDU) {
 // startPumps starts the background goroutines for the session. It captures
 // current conn/channel values locally so that replaceConnection can safely
 // replace them on the Session struct without racing with old goroutines.
+// A per-invocation WaitGroup is created so Close and reconnect can wait for
+// exactly these 4 goroutines to exit without risking an Add-after-Wait panic.
 func (s *Session) startPumps(ctx context.Context) {
 	conn := s.conn
 	writeCh := s.writeCh
 	unsolCh := s.unsolCh
 	done := s.done
 
-	go s.readPumpLoop(ctx, conn, unsolCh)
-	go s.writePumpLoop(ctx, conn, writeCh)
-	go s.dispatchLoop(ctx, unsolCh, done)
-	go s.keepaliveLoop(ctx)
+	// wg.Add(4) MUST be called before launching goroutines to prevent
+	// a race where Wait() returns before all goroutines have started.
+	wg := &sync.WaitGroup{}
+	wg.Add(4)
+
+	go func() { defer wg.Done(); s.readPumpLoop(ctx, conn, unsolCh) }()
+	go func() { defer wg.Done(); s.writePumpLoop(ctx, conn, writeCh) }()
+	go func() { defer wg.Done(); s.dispatchLoop(ctx, unsolCh, done) }()
+	go func() { defer wg.Done(); s.keepaliveLoop(ctx) }()
+
+	s.mu.Lock()
+	s.pumpWg = wg
+	s.mu.Unlock()
 }
 
 // pduHookBridge returns a transport-compatible PDU hook function that bridges
