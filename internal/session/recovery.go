@@ -146,71 +146,73 @@ func (s *Session) reconnect(cause error) {
 		default:
 		}
 
-		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		// attemptLogin dials and logs in using a scoped timeout context.
+		// defer cancel() inside the closure guarantees the context timer is
+		// released on every exit path, including break/continue and future
+		// code changes — preventing goroutine/timer leaks.
+		tc, params, err := func() (*transport.Conn, *login.NegotiatedParams, error) {
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
 
-		// Dial new TCP connection.
-		tc, err := s.cfg.dialFunc(ctx, s.targetAddr, 0)
-		if err != nil {
-			cancel()
-			lastErr = err
-			s.cfg.logger.Warn("session: reconnect dial failed",
-				"attempt", attempt+1, "error", err)
-			continue
-		}
+			// Dial new TCP connection.
+			tc, err := s.cfg.dialFunc(ctx, s.targetAddr, 0)
+			if err != nil {
+				s.cfg.logger.Warn("session: reconnect dial failed",
+					"attempt", attempt+1, "error", err)
+				return nil, nil, err
+			}
 
-		// Login with same ISID. First try old TSIH for session
-		// reinstatement (RFC 7143 Section 6.3.5). If that fails with
-		// "session does not exist" (class=2 detail=10), retry with
-		// TSIH=0 for a fresh session on the same attempt.
-		loginOpts := make([]login.LoginOption, 0, len(s.cfg.loginOpts)+3)
-		loginOpts = append(loginOpts, login.WithISID(s.isid), login.WithTSIH(s.tsih))
-		loginOpts = append(loginOpts, login.WithLoginLogger(s.cfg.logger))
-		loginOpts = append(loginOpts, s.cfg.loginOpts...)
+			// Login with same ISID. First try old TSIH for session
+			// reinstatement (RFC 7143 Section 6.3.5). If that fails with
+			// "session does not exist" (class=2 detail=10), retry with
+			// TSIH=0 for a fresh session on the same attempt.
+			loginOpts := make([]login.LoginOption, 0, len(s.cfg.loginOpts)+3)
+			loginOpts = append(loginOpts, login.WithISID(s.isid), login.WithTSIH(s.tsih))
+			loginOpts = append(loginOpts, login.WithLoginLogger(s.cfg.logger))
+			loginOpts = append(loginOpts, s.cfg.loginOpts...)
 
-		params, err := login.Login(ctx, tc, loginOpts...)
-		if err != nil {
-			// If session reinstatement fails, try fresh session (TSIH=0).
-			var le *login.LoginError
-			if errors.As(err, &le) && le.StatusClass == 2 {
-				cancel()
-				_ = tc.Close()
+			params, err := login.Login(ctx, tc, loginOpts...)
+			if err != nil {
+				// If session reinstatement fails, try fresh session (TSIH=0).
+				var le *login.LoginError
+				if errors.As(err, &le) && le.StatusClass == 2 {
+					_ = tc.Close()
 
-				// Re-dial for fresh session login.
-				ctx2, cancel2 := context.WithTimeout(context.Background(), 10*time.Second)
-				tc2, dialErr := s.cfg.dialFunc(ctx2, s.targetAddr, 0)
-				if dialErr != nil {
-					cancel2()
-					lastErr = dialErr
-					s.cfg.logger.Warn("session: reconnect re-dial failed",
-						"attempt", attempt+1, "error", dialErr)
-					continue
+					// Re-dial for fresh session login. Use a new scoped context
+					// so the fresh dial has its own independent timeout.
+					ctx2, cancel2 := context.WithTimeout(context.Background(), 10*time.Second)
+					defer cancel2()
+					tc2, dialErr := s.cfg.dialFunc(ctx2, s.targetAddr, 0)
+					if dialErr != nil {
+						s.cfg.logger.Warn("session: reconnect re-dial failed",
+							"attempt", attempt+1, "error", dialErr)
+						return nil, nil, dialErr
+					}
+
+					freshOpts := make([]login.LoginOption, 0, len(s.cfg.loginOpts)+2)
+					freshOpts = append(freshOpts, login.WithISID(s.isid))
+					freshOpts = append(freshOpts, login.WithLoginLogger(s.cfg.logger))
+					freshOpts = append(freshOpts, s.cfg.loginOpts...)
+
+					params, err = login.Login(ctx2, tc2, freshOpts...)
+					if err != nil {
+						_ = tc2.Close()
+						s.cfg.logger.Warn("session: reconnect fresh login failed",
+							"attempt", attempt+1, "error", err)
+						return nil, nil, err
+					}
+					return tc2, params, nil
 				}
-
-				freshOpts := make([]login.LoginOption, 0, len(s.cfg.loginOpts)+2)
-				freshOpts = append(freshOpts, login.WithISID(s.isid))
-				freshOpts = append(freshOpts, login.WithLoginLogger(s.cfg.logger))
-				freshOpts = append(freshOpts, s.cfg.loginOpts...)
-
-				params, err = login.Login(ctx2, tc2, freshOpts...)
-				cancel2()
-				if err != nil {
-					_ = tc2.Close()
-					lastErr = err
-					s.cfg.logger.Warn("session: reconnect fresh login failed",
-						"attempt", attempt+1, "error", err)
-					continue
-				}
-				tc = tc2
-			} else {
-				cancel()
 				_ = tc.Close()
-				lastErr = err
 				s.cfg.logger.Warn("session: reconnect login failed",
 					"attempt", attempt+1, "error", err)
-				continue
+				return nil, nil, err
 			}
-		} else {
-			cancel()
+			return tc, params, nil
+		}()
+		if err != nil {
+			lastErr = err
+			continue
 		}
 
 		newConn = tc
