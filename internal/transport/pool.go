@@ -118,6 +118,10 @@ func PutBuffer(bp *[]byte) {
 	c := cap(*bp)
 	// Reset slice length to full capacity before returning to pool.
 	*bp = (*bp)[:c]
+	// Soft bound: concurrent callers may each pass the <= poolTierMax check
+	// before any Pool.Put call completes, so the pool may transiently hold up
+	// to poolTierMax + numConcurrentCallers entries. This is acceptable for a
+	// memory-pressure safety valve; use a mutex if a hard cap is needed.
 	switch {
 	case c >= largeBufSize:
 		if largeCount.Add(1) <= poolTierMax {
