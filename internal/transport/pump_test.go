@@ -3,6 +3,7 @@ package transport
 import (
 	"context"
 	"encoding/binary"
+	"fmt"
 	"log/slog"
 	"net"
 	"sync"
@@ -75,7 +76,7 @@ func TestReadPump_BasicDispatch(t *testing.T) {
 	// Start read pump
 	errCh := make(chan error, 1)
 	go func() {
-		errCh <- ReadPump(ctx, rConn, router, unsolicitedCh, false, false, slog.Default(), nil, 0, nil)
+		errCh <- ReadPump(ctx, rConn, router, unsolicitedCh, false, false, slog.Default(), nil, 0, nil, nil)
 	}()
 
 	// Write 3 PDUs with matching ITTs
@@ -111,7 +112,7 @@ func TestReadPump_UnsolicitedITT(t *testing.T) {
 	defer cancel()
 
 	go func() {
-		ReadPump(ctx, rConn, router, unsolicitedCh, false, false, slog.Default(), nil, 0, nil)
+		ReadPump(ctx, rConn, router, unsolicitedCh, false, false, slog.Default(), nil, 0, nil, nil)
 	}()
 
 	// Write PDU with reserved ITT 0xFFFFFFFF
@@ -193,7 +194,7 @@ func TestPump_Shutdown(t *testing.T) {
 		writeErr <- WritePump(ctx, wConn, writeCh, slog.Default(), nil, nil)
 	}()
 	go func() {
-		readErr <- ReadPump(ctx, rConn, router, unsolicitedCh, false, false, slog.Default(), nil, 0, nil)
+		readErr <- ReadPump(ctx, rConn, router, unsolicitedCh, false, false, slog.Default(), nil, 0, nil, nil)
 	}()
 
 	// Cancel context to trigger shutdown
@@ -232,7 +233,7 @@ func TestPump_FullRoundTrip(t *testing.T) {
 
 	// Start write pump on wConn, read pump on rConn
 	go WritePump(ctx, wConn, writeCh, slog.Default(), nil, nil)
-	go ReadPump(ctx, rConn, router, unsolicitedCh, false, false, slog.Default(), nil, 0, nil)
+	go ReadPump(ctx, rConn, router, unsolicitedCh, false, false, slog.Default(), nil, 0, nil, nil)
 
 	// Register an ITT and send a PDU through the write pump
 	itt, respCh := router.Register()
@@ -277,7 +278,7 @@ func TestReadPumpPDUHook(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	go ReadPump(ctx, rConn, router, unsolicitedCh, false, false, slog.Default(), hook, 0, nil)
+	go ReadPump(ctx, rConn, router, unsolicitedCh, false, false, slog.Default(), hook, 0, nil, nil)
 
 	// Send a PDU with matching ITT.
 	bhs := makeBHS(pdu.OpSCSIResponse, 0, 0)
@@ -406,7 +407,7 @@ func TestReadPumpLogger(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	go ReadPump(ctx, rConn, router, unsolicitedCh, false, false, logger, nil, 0, nil)
+	go ReadPump(ctx, rConn, router, unsolicitedCh, false, false, logger, nil, 0, nil, nil)
 
 	bhs := makeBHS(pdu.OpSCSIResponse, 0, 0)
 	binary.BigEndian.PutUint32(bhs[16:20], itt)
@@ -440,3 +441,439 @@ func TestReadPumpLogger(t *testing.T) {
 		t.Error("no 'pdu received' log record found")
 	}
 }
+
+// makeUnsolicitedPDU creates a minimal unsolicited PDU (ITT=0xFFFFFFFF) with
+// the given opcode for testing ReadPump classification logic.
+func makeUnsolicitedPDU(opcode pdu.OpCode) [pdu.BHSLength]byte {
+	bhs := makeBHS(opcode, 0, 0)
+	// ITT = 0xFFFFFFFF (reserved / unsolicited)
+	binary.BigEndian.PutUint32(bhs[16:20], 0xFFFFFFFF)
+	return bhs
+}
+
+// TestReadPump_NOPInNeverDropped verifies that NOP-In PDUs (opcode 0x20) are
+// never silently dropped even when unsolicitedCh is full. The blocking send
+// must hold the PDU until the channel drains.
+func TestReadPump_NOPInNeverDropped(t *testing.T) {
+	rConn, wConn := net.Pipe()
+	defer rConn.Close()
+	defer wConn.Close()
+
+	router := NewRouter(0)
+	// Capacity 1, pre-fill with a dummy PDU so it is "full".
+	unsolicitedCh := make(chan *RawPDU, 1)
+	unsolicitedCh <- &RawPDU{} // fill it
+
+	dropCounter := &atomic.Uint64{}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	pumpDone := make(chan error, 1)
+	go func() {
+		pumpDone <- ReadPump(ctx, rConn, router, unsolicitedCh, false, false,
+			slog.Default(), nil, 0, nil, dropCounter)
+	}()
+
+	// Send a NOP-In with ITT=0xFFFFFFFF.
+	bhs := makeUnsolicitedPDU(pdu.OpNOPIn)
+	writeRawBytes(wConn, bhs, nil, nil, false, false)
+
+	// Give ReadPump time to receive and block on the full channel.
+	time.Sleep(50 * time.Millisecond)
+
+	// Drop counter must be zero — NOP-In must not be dropped.
+	if got := dropCounter.Load(); got != 0 {
+		t.Errorf("drop counter = %d after NOP-In with full channel, want 0", got)
+	}
+
+	// Drain the blocking PDU from the channel, which unblocks ReadPump.
+	select {
+	case <-unsolicitedCh: // remove the pre-filled dummy
+	case <-time.After(time.Second):
+		t.Fatal("timeout draining pre-filled PDU")
+	}
+
+	// Now the NOP-In PDU should be delivered.
+	select {
+	case got := <-unsolicitedCh:
+		opcode := pdu.OpCode(got.BHS[0] & 0x3f)
+		if opcode != pdu.OpNOPIn {
+			t.Errorf("delivered opcode = %v, want OpNOPIn", opcode)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("timeout waiting for NOP-In delivery after channel drained")
+	}
+
+	// Drop counter still zero.
+	if got := dropCounter.Load(); got != 0 {
+		t.Errorf("drop counter = %d after successful NOP-In delivery, want 0", got)
+	}
+
+	// Shut down cleanly.
+	cancel()
+	wConn.Close()
+	select {
+	case <-pumpDone:
+	case <-time.After(2 * time.Second):
+		t.Fatal("ReadPump did not exit after cancel + close")
+	}
+}
+
+// TestReadPump_OptionalPDUDropCounted verifies that non-NOP-In unsolicited PDUs
+// (e.g. vendor-specific) are counted when dropped due to a full channel.
+func TestReadPump_OptionalPDUDropCounted(t *testing.T) {
+	rConn, wConn := net.Pipe()
+	defer rConn.Close()
+	defer wConn.Close()
+
+	router := NewRouter(0)
+	// Capacity 1, pre-fill so it's full.
+	unsolicitedCh := make(chan *RawPDU, 1)
+	unsolicitedCh <- &RawPDU{}
+
+	dropCounter := &atomic.Uint64{}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	pumpDone := make(chan error, 1)
+	go func() {
+		pumpDone <- ReadPump(ctx, rConn, router, unsolicitedCh, false, false,
+			slog.Default(), nil, 0, nil, dropCounter)
+	}()
+
+	// Send a vendor-specific async PDU (opcode 0x3e is not a known opcode,
+	// any non-NOP-In opcode with ITT=0xFFFFFFFF qualifies as optional/droppable).
+	// We use OpAsyncMsg (0x32) since it's a real optional async PDU.
+	bhs := makeUnsolicitedPDU(pdu.OpAsyncMsg)
+	writeRawBytes(wConn, bhs, nil, nil, false, false)
+
+	// Wait for ReadPump to process the PDU and drop it.
+	deadline := time.After(2 * time.Second)
+	for {
+		if dropCounter.Load() >= 1 {
+			break
+		}
+		select {
+		case <-deadline:
+			t.Fatalf("timeout waiting for drop counter to reach 1; got %d", dropCounter.Load())
+		case <-time.After(5 * time.Millisecond):
+		}
+	}
+
+	if got := dropCounter.Load(); got != 1 {
+		t.Errorf("drop counter = %d, want 1", got)
+	}
+
+	cancel()
+	wConn.Close()
+	select {
+	case <-pumpDone:
+	case <-time.After(2 * time.Second):
+		t.Fatal("ReadPump did not exit")
+	}
+}
+
+// TestReadPump_DropCounterAccumulates verifies that multiple dropped optional
+// PDUs accumulate correctly in the drop counter.
+func TestReadPump_DropCounterAccumulates(t *testing.T) {
+	rConn, wConn := net.Pipe()
+	defer rConn.Close()
+	defer wConn.Close()
+
+	router := NewRouter(0)
+	// Capacity 1, pre-fill so it's always full.
+	unsolicitedCh := make(chan *RawPDU, 1)
+	unsolicitedCh <- &RawPDU{}
+
+	dropCounter := &atomic.Uint64{}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	pumpDone := make(chan error, 1)
+	go func() {
+		pumpDone <- ReadPump(ctx, rConn, router, unsolicitedCh, false, false,
+			slog.Default(), nil, 0, nil, dropCounter)
+	}()
+
+	const numDropped = 3
+	for i := 0; i < numDropped; i++ {
+		bhs := makeUnsolicitedPDU(pdu.OpAsyncMsg)
+		writeRawBytes(wConn, bhs, nil, nil, false, false)
+	}
+
+	// Wait for all drops to register.
+	deadline := time.After(5 * time.Second)
+	for {
+		if dropCounter.Load() >= numDropped {
+			break
+		}
+		select {
+		case <-deadline:
+			t.Fatalf("timeout waiting for drop counter = %d; got %d", numDropped, dropCounter.Load())
+		case <-time.After(10 * time.Millisecond):
+		}
+	}
+
+	if got := dropCounter.Load(); got != numDropped {
+		t.Errorf("drop counter = %d, want %d", got, numDropped)
+	}
+
+	cancel()
+	wConn.Close()
+	select {
+	case <-pumpDone:
+	case <-time.After(2 * time.Second):
+		t.Fatal("ReadPump did not exit")
+	}
+}
+
+// TestReadPump_DropCounterNilSafe verifies that ReadPump handles a nil
+// dropCounter gracefully (no panic on optional PDU drop).
+func TestReadPump_DropCounterNilSafe(t *testing.T) {
+	rConn, wConn := net.Pipe()
+	defer rConn.Close()
+	defer wConn.Close()
+
+	router := NewRouter(0)
+	unsolicitedCh := make(chan *RawPDU, 1)
+	unsolicitedCh <- &RawPDU{} // full
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	pumpDone := make(chan error, 1)
+	go func() {
+		// nil dropCounter — must not panic
+		pumpDone <- ReadPump(ctx, rConn, router, unsolicitedCh, false, false,
+			slog.Default(), nil, 0, nil, nil)
+	}()
+
+	bhs := makeUnsolicitedPDU(pdu.OpAsyncMsg)
+	writeRawBytes(wConn, bhs, nil, nil, false, false)
+
+	// Give pump time to process without panicking.
+	time.Sleep(100 * time.Millisecond)
+
+	cancel()
+	wConn.Close()
+	select {
+	case <-pumpDone:
+	case <-time.After(2 * time.Second):
+		t.Fatal("ReadPump did not exit")
+	}
+}
+
+// --- Task 2: FaultConn exit path tests and single-writer invariant ---
+
+// TestPump_NormalClose verifies that cancelling the context causes both pumps
+// to exit cleanly. No goroutine leak.
+func TestPump_NormalClose(t *testing.T) {
+	server, client := net.Pipe()
+	defer server.Close()
+	defer client.Close()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	router := NewRouter(16)
+	unsolCh := make(chan *RawPDU, 64)
+	dropCounter := &atomic.Uint64{}
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		ReadPump(ctx, client, router, unsolCh, false, false,
+			slog.Default(), nil, 0, binary.LittleEndian, dropCounter)
+	}()
+
+	cancel()
+	client.Close() // unblock ReadPump blocked in io.ReadFull
+	wg.Wait()
+	// goleak in TestMain verifies no goroutine leak.
+}
+
+// TestPump_ReadError verifies that a read error from the connection causes
+// ReadPump to return the error without a goroutine leak.
+func TestPump_ReadError(t *testing.T) {
+	server, client := net.Pipe()
+	defer server.Close()
+
+	faultClient := NewFaultConn(client, WithReadFaultAfter(0, errReadFault), nil)
+	defer faultClient.Close()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	router := NewRouter(0)
+	unsolCh := make(chan *RawPDU, 64)
+	dropCounter := &atomic.Uint64{}
+
+	pumpDone := make(chan error, 1)
+	go func() {
+		pumpDone <- ReadPump(ctx, faultClient, router, unsolCh, false, false,
+			slog.Default(), nil, 0, nil, dropCounter)
+	}()
+
+	select {
+	case err := <-pumpDone:
+		if err == nil {
+			t.Error("ReadPump returned nil, want read fault error")
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("ReadPump did not exit after read error")
+	}
+	server.Close()
+}
+
+// TestPump_WriteError verifies that a write error from the connection causes
+// WritePump to return the error without a goroutine leak.
+func TestPump_WriteError(t *testing.T) {
+	server, client := net.Pipe()
+	defer server.Close()
+
+	faultClient := NewFaultConn(client, nil, WithWriteFaultAfter(0, errWriteFault))
+	defer faultClient.Close()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	writeCh := make(chan *RawPDU, 10)
+
+	pumpDone := make(chan error, 1)
+	go func() {
+		pumpDone <- WritePump(ctx, faultClient, writeCh, slog.Default(), nil, nil)
+	}()
+
+	// Send a PDU to trigger the write fault.
+	writeCh <- &RawPDU{}
+
+	select {
+	case err := <-pumpDone:
+		if err == nil {
+			t.Error("WritePump returned nil, want write fault error")
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("WritePump did not exit after write error")
+	}
+	server.Close()
+}
+
+// TestPump_TCPReset verifies that closing the remote side mid-read causes
+// ReadPump to return with an error.
+func TestPump_TCPReset(t *testing.T) {
+	server, client := net.Pipe()
+	defer client.Close()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	router := NewRouter(0)
+	unsolCh := make(chan *RawPDU, 64)
+
+	pumpDone := make(chan error, 1)
+	go func() {
+		pumpDone <- ReadPump(ctx, client, router, unsolCh, false, false,
+			slog.Default(), nil, 0, nil, nil)
+	}()
+
+	// Close the remote side to simulate TCP reset/EOF.
+	server.Close()
+
+	select {
+	case err := <-pumpDone:
+		if err == nil {
+			t.Error("ReadPump returned nil, want EOF or closed pipe error")
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("ReadPump did not exit after TCP reset")
+	}
+}
+
+// TestPump_ContextCancelDuringRead verifies that cancelling the context while
+// ReadPump is blocked in io.ReadFull causes it to return (after conn.Close
+// unblocks the syscall). Returns ctx.Err() or a connection error.
+func TestPump_ContextCancelDuringRead(t *testing.T) {
+	server, client := net.Pipe()
+	defer server.Close()
+	defer client.Close()
+
+	ctx, cancel := context.WithCancel(context.Background())
+
+	router := NewRouter(0)
+	unsolCh := make(chan *RawPDU, 64)
+
+	pumpDone := make(chan error, 1)
+	go func() {
+		pumpDone <- ReadPump(ctx, client, router, unsolCh, false, false,
+			slog.Default(), nil, 0, nil, nil)
+	}()
+
+	// Cancel the context, then close the conn to unblock io.ReadFull.
+	cancel()
+	client.Close()
+
+	select {
+	case err := <-pumpDone:
+		// Acceptable: either context.Canceled or a connection error.
+		_ = err
+	case <-time.After(2 * time.Second):
+		t.Fatal("ReadPump did not exit after context cancel + close")
+	}
+}
+
+// TestWritePump_ConcurrentWriters verifies that multiple goroutines can send
+// PDUs to WritePump via writeCh concurrently without data races.
+// The -race detector catches any violations of the single-writer invariant.
+func TestWritePump_ConcurrentWriters(t *testing.T) {
+	server, client := net.Pipe()
+	defer server.Close()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	writeCh := make(chan *RawPDU, 100)
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		WritePump(ctx, client, writeCh, slog.Default(), nil, nil)
+	}()
+
+	// Drain server side so WritePump never blocks on TCP backpressure.
+	go func() {
+		buf := make([]byte, 65536)
+		for {
+			if _, err := server.Read(buf); err != nil {
+				return
+			}
+		}
+	}()
+
+	const numWriters = 10
+	const pdusPerWriter = 50
+	var senderWg sync.WaitGroup
+	for i := 0; i < numWriters; i++ {
+		senderWg.Add(1)
+		go func() {
+			defer senderWg.Done()
+			for j := 0; j < pdusPerWriter; j++ {
+				writeCh <- &RawPDU{}
+			}
+		}()
+	}
+	senderWg.Wait()
+
+	cancel()
+	client.Close()
+	wg.Wait()
+	// If we reach here without a -race complaint, the single-writer invariant holds.
+}
+
+// sentinel errors for FaultConn injection in pump tests.
+var (
+	errReadFault  = fmt.Errorf("injected read fault")
+	errWriteFault = fmt.Errorf("injected write fault")
+)
