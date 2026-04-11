@@ -1,8 +1,10 @@
 package uiscsi_test
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"log/slog"
 	"os"
 
@@ -105,4 +107,38 @@ func ExampleWithCHAP() {
 		uiscsi.WithTarget("iqn.2026-03.com.example:storage"),
 		uiscsi.WithCHAP("initiator-user", "s3cret"),
 	)
+}
+
+func ExampleRawOps_StreamExecute() {
+	// Streaming raw CDB: read one block from a tape drive.
+	ctx := context.Background()
+	sess, err := uiscsi.Dial(ctx, "192.168.1.100:3260",
+		uiscsi.WithTarget("iqn.2026-03.com.example:tape"),
+		uiscsi.WithMaxRecvDataSegmentLength(262144), // 256KB PDUs for tape
+	)
+	if err != nil {
+		return
+	}
+	defer sess.Close()
+
+	// SSC READ(6): opcode 0x08, read 1 block of 65536 bytes.
+	const blockSize = 65536
+	cdb := []byte{0x08, 0x00, 0x00, 0x01, 0x00, 0x00}
+	sr, err := sess.Raw().StreamExecute(ctx, 0, cdb, uiscsi.WithDataIn(blockSize))
+	if err != nil {
+		fmt.Println("stream execute:", err)
+		return
+	}
+
+	var buf bytes.Buffer
+	if _, err := io.Copy(&buf, sr.Data); err != nil {
+		fmt.Println("stream read:", err)
+		return
+	}
+	status, _, err := sr.Wait()
+	if err != nil {
+		fmt.Println("wait:", err)
+		return
+	}
+	fmt.Printf("status: 0x%02X, bytes: %d\n", status, buf.Len())
 }
