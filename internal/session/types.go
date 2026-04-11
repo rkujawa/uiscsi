@@ -126,6 +126,7 @@ type sessionConfig struct {
 	asyncHandler         func(context.Context, AsyncEvent)
 	pduHook              func(context.Context, PDUDirection, *transport.RawPDU)
 	metricsHook          func(MetricEvent)
+	stateChangeHook      func(SessionState)
 	logger               *slog.Logger
 	maxReconnectAttempts int
 	reconnectBackoff     time.Duration

@@ -115,7 +115,19 @@ func NewSession(conn *transport.Conn, params login.NegotiatedParams, opts ...Ses
 	// without racing with goroutines that use the old values.
 	s.startPumps(ctx)
 
+	// Notify observers that the session has entered full-feature phase.
+	// Called after pumps start so the session is ready to accept commands.
+	s.fireStateChange(SessionFullFeature)
+
 	return s
+}
+
+// fireStateChange invokes the stateChangeHook if one is registered.
+// It MUST NOT be called while holding s.mu to prevent deadlock.
+func (s *Session) fireStateChange(state SessionState) {
+	if h := s.cfg.stateChangeHook; h != nil {
+		h(state)
+	}
 }
 
 // Params returns a copy of the negotiated parameters. The returned value
@@ -373,6 +385,10 @@ func (s *Session) SubmitStreaming(ctx context.Context, cmd Command) (<-chan Resu
 func (s *Session) Close() error {
 	var closeErr error
 	s.closeOnce.Do(func() {
+		// Notify observers before teardown so they see the transition.
+		// Called before acquiring s.mu to prevent deadlock per fireStateChange contract.
+		s.fireStateChange(SessionClosed)
+
 		// Attempt graceful logout if still logged in.
 		s.mu.Lock()
 		wasLoggedIn := s.loggedIn

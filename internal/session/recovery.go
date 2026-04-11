@@ -31,6 +31,11 @@ func (s *Session) triggerReconnect(cause error) {
 	s.recovering = true
 	erl := s.params.ErrorRecoveryLevel
 	s.mu.Unlock()
+
+	// Notify observers that reconnection has started. Called after releasing
+	// s.mu per fireStateChange contract (must not hold lock).
+	s.fireStateChange(SessionReconnecting)
+
 	s.cfg.logger.Info("session: reconnect started",
 		"target", s.targetAddr,
 		"cause", cause.Error(),
@@ -255,6 +260,11 @@ func (s *Session) reconnect(cause error) {
 
 	// Step 5: Start new pump goroutines with fresh per-invocation WaitGroup.
 	s.startPumps(newCtx)
+
+	// Notify observers that reconnection succeeded and full-feature phase resumed.
+	// Called after startPumps so the session is ready to accept commands again.
+	// Called before retryTasks so observers see FullFeature before retried commands.
+	s.fireStateChange(SessionFullFeature)
 
 	// Step 6: Retry snapshotted tasks.
 	s.retryTasks(newCtx, taskSnapshot)
