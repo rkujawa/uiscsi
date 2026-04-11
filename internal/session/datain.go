@@ -95,6 +95,7 @@ func (t *task) handleDataIn(din *pdu.DataIn) {
 					t.dataReader.closeWithError(snackErr)
 				}
 				t.resultCh <- Result{Err: snackErr}
+				t.cancelOnce.Do(func() { close(t.done) }) // prevent further PDU processing for this task
 			}
 			return
 		}
