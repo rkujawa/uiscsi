@@ -37,6 +37,8 @@ func WithCHAP(user, secret string) Option {
 }
 
 // WithMutualCHAP enables mutual CHAP authentication.
+//
+// deadcode: retained — part of the public iSCSI initiator API for external consumers.
 func WithMutualCHAP(user, secret, targetSecret string) Option {
 	return func(c *dialConfig) {
 		c.loginOpts = append(c.loginOpts, login.WithMutualCHAP(user, secret, targetSecret))
@@ -51,6 +53,8 @@ func WithInitiatorName(iqn string) Option {
 }
 
 // WithHeaderDigest sets header digest preferences.
+//
+// deadcode: retained — part of the public iSCSI initiator API for external consumers.
 func WithHeaderDigest(prefs ...string) Option {
 	return func(c *dialConfig) {
 		c.loginOpts = append(c.loginOpts, login.WithHeaderDigest(prefs...))
@@ -58,6 +62,8 @@ func WithHeaderDigest(prefs ...string) Option {
 }
 
 // WithDataDigest sets data digest preferences.
+//
+// deadcode: retained — part of the public iSCSI initiator API for external consumers.
 func WithDataDigest(prefs ...string) Option {
 	return func(c *dialConfig) {
 		c.loginOpts = append(c.loginOpts, login.WithDataDigest(prefs...))
@@ -73,6 +79,8 @@ func WithLogger(l *slog.Logger) Option {
 }
 
 // WithKeepaliveInterval sets the keepalive ping interval.
+//
+// deadcode: retained — part of the public iSCSI initiator API for external consumers.
 func WithKeepaliveInterval(d time.Duration) Option {
 	return func(c *dialConfig) {
 		c.sessionOpts = append(c.sessionOpts, session.WithKeepaliveInterval(d))
@@ -80,6 +88,8 @@ func WithKeepaliveInterval(d time.Duration) Option {
 }
 
 // WithKeepaliveTimeout sets the keepalive timeout.
+//
+// deadcode: retained — part of the public iSCSI initiator API for external consumers.
 func WithKeepaliveTimeout(d time.Duration) Option {
 	return func(c *dialConfig) {
 		c.sessionOpts = append(c.sessionOpts, session.WithKeepaliveTimeout(d))
@@ -87,6 +97,8 @@ func WithKeepaliveTimeout(d time.Duration) Option {
 }
 
 // WithAsyncHandler registers an async event callback.
+//
+// deadcode: retained — part of the public iSCSI initiator API for external consumers.
 func WithAsyncHandler(h func(context.Context, AsyncEvent)) Option {
 	return func(c *dialConfig) {
 		c.sessionOpts = append(c.sessionOpts, session.WithAsyncHandler(func(ctx context.Context, ae session.AsyncEvent) {
@@ -98,6 +110,8 @@ func WithAsyncHandler(h func(context.Context, AsyncEvent)) Option {
 // WithPDUHook registers a PDU send/receive hook. The []byte argument is the
 // concatenation of BHS (48 bytes) + DataSegment from the internal
 // transport.RawPDU. This avoids exposing internal transport types.
+//
+// deadcode: retained — part of the public iSCSI initiator API for external consumers.
 func WithPDUHook(h func(context.Context, PDUDirection, []byte)) Option {
 	return func(c *dialConfig) {
 		c.sessionOpts = append(c.sessionOpts, session.WithPDUHook(func(ctx context.Context, dir session.PDUDirection, raw *transport.RawPDU) {
@@ -111,6 +125,8 @@ func WithPDUHook(h func(context.Context, PDUDirection, []byte)) Option {
 }
 
 // WithMetricsHook registers a metrics callback.
+//
+// deadcode: retained — part of the public iSCSI initiator API for external consumers.
 func WithMetricsHook(h func(MetricEvent)) Option {
 	return func(c *dialConfig) {
 		c.sessionOpts = append(c.sessionOpts, session.WithMetricsHook(func(me session.MetricEvent) {
@@ -143,6 +159,8 @@ func WithMaxRecvDataSegmentLength(size uint32) Option {
 // Keys must match RFC 7143 Section 13 key names exactly (e.g.,
 // "InitialR2T", "ImmediateData", "MaxBurstLength", "ErrorRecoveryLevel").
 // Values replace the defaults proposed during login negotiation.
+//
+// deadcode: retained — part of the public iSCSI initiator API for external consumers.
 func WithOperationalOverrides(overrides map[string]string) Option {
 	return func(c *dialConfig) {
 		c.loginOpts = append(c.loginOpts, login.WithOperationalOverrides(overrides))
@@ -152,6 +170,8 @@ func WithOperationalOverrides(overrides map[string]string) Option {
 // WithDigestByteOrder sets the byte order for CRC32C digest values on the wire.
 // Default is LittleEndian (matches Linux LIO target). Set to binary.BigEndian
 // for targets that use network byte order for digests.
+//
+// deadcode: retained — part of the public iSCSI initiator API for external consumers.
 func WithDigestByteOrder(bo binary.ByteOrder) Option {
 	return func(c *dialConfig) {
 		c.sessionOpts = append(c.sessionOpts, session.WithDigestByteOrder(bo))
@@ -161,6 +181,8 @@ func WithDigestByteOrder(bo binary.ByteOrder) Option {
 // WithMaxBurstLength sets the maximum data burst size for solicited Data-Out
 // transfers (write operations). Default is 262144 (256KB). Increasing this
 // allows larger write bursts per R2T, reducing R2T round-trips for large writes.
+//
+// deadcode: retained — part of the public iSCSI initiator API for external consumers.
 func WithMaxBurstLength(size uint32) Option {
 	return func(c *dialConfig) {
 		c.loginOpts = append(c.loginOpts, login.WithOperationalOverrides(map[string]string{
@@ -172,6 +194,8 @@ func WithMaxBurstLength(size uint32) Option {
 // WithFirstBurstLength sets the maximum unsolicited Data-Out size for write
 // operations. Default is 65536 (64KB). Data up to this size is sent
 // immediately with the SCSI Command PDU, without waiting for an R2T.
+//
+// deadcode: retained — part of the public iSCSI initiator API for external consumers.
 func WithFirstBurstLength(size uint32) Option {
 	return func(c *dialConfig) {
 		c.loginOpts = append(c.loginOpts, login.WithOperationalOverrides(map[string]string{
@@ -184,6 +208,8 @@ func WithFirstBurstLength(size uint32) Option {
 // chunks buffered in the chanReader channel). Higher values absorb consumer
 // stalls without triggering TCP backpressure — critical for tape drives that
 // stop streaming on any TCP stall. Default is 128 slots.
+//
+// deadcode: retained — part of the public iSCSI initiator API for external consumers.
 func WithStreamBufDepth(depth int) Option {
 	return func(c *dialConfig) {
 		c.sessionOpts = append(c.sessionOpts, session.WithStreamBufDepth(depth))
@@ -192,6 +218,8 @@ func WithStreamBufDepth(depth int) Option {
 
 // WithRouterBufDepth sets the PDU dispatch buffer depth per task. Higher
 // values absorb read pump stalls. Default is 64 slots.
+//
+// deadcode: retained — part of the public iSCSI initiator API for external consumers.
 func WithRouterBufDepth(depth int) Option {
 	return func(c *dialConfig) {
 		c.sessionOpts = append(c.sessionOpts, session.WithRouterBufDepth(depth))
@@ -199,6 +227,8 @@ func WithRouterBufDepth(depth int) Option {
 }
 
 // WithMaxReconnectAttempts sets the maximum number of ERL 0 reconnect attempts.
+//
+// deadcode: retained — part of the public iSCSI initiator API for external consumers.
 func WithMaxReconnectAttempts(n int) Option {
 	return func(c *dialConfig) {
 		c.sessionOpts = append(c.sessionOpts, session.WithMaxReconnectAttempts(n))
@@ -206,6 +236,8 @@ func WithMaxReconnectAttempts(n int) Option {
 }
 
 // WithReconnectBackoff sets the reconnect backoff duration.
+//
+// deadcode: retained — part of the public iSCSI initiator API for external consumers.
 func WithReconnectBackoff(base time.Duration) Option {
 	return func(c *dialConfig) {
 		c.sessionOpts = append(c.sessionOpts, session.WithReconnectBackoff(base))
@@ -216,6 +248,8 @@ func WithReconnectBackoff(base time.Duration) Option {
 // at ERL >= 1. When no Data-In arrives within this duration, a Status
 // SNACK is sent to request the missing response (tail loss recovery).
 // Default is 5 seconds.
+//
+// deadcode: retained — part of the public iSCSI initiator API for external consumers.
 func WithSNACKTimeout(d time.Duration) Option {
 	return func(c *dialConfig) {
 		c.sessionOpts = append(c.sessionOpts, session.WithSNACKTimeout(d))

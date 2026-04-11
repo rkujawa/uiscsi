@@ -42,6 +42,8 @@ func ParseSenseData(raw []byte) (*SenseInfo, error) {
 //	    if errors.As(err, &se) { /* se.SenseKey, se.ASC, se.ASCQ */ }
 //	    return err
 //	}
+//
+// deadcode: retained — part of the public iSCSI initiator API for external consumers.
 func CheckStatus(status uint8, senseData []byte) error {
 	if status == 0 {
 		return nil
