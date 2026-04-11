@@ -143,7 +143,7 @@ func (s *Session) reconnect(cause error) {
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 
 		// Dial new TCP connection.
-		tc, err := transport.Dial(ctx, s.targetAddr)
+		tc, err := s.cfg.dialFunc(ctx, s.targetAddr)
 		if err != nil {
 			cancel()
 			lastErr = err
@@ -171,7 +171,7 @@ func (s *Session) reconnect(cause error) {
 
 				// Re-dial for fresh session login.
 				ctx2, cancel2 := context.WithTimeout(context.Background(), 10*time.Second)
-				tc2, dialErr := transport.Dial(ctx2, s.targetAddr)
+				tc2, dialErr := s.cfg.dialFunc(ctx2, s.targetAddr)
 				if dialErr != nil {
 					cancel2()
 					lastErr = dialErr

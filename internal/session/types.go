@@ -135,6 +135,10 @@ type sessionConfig struct {
 	digestByteOrder      binary.ByteOrder
 	streamBufDepth       int // chanReader buffer depth (0 = default 128)
 	routerBufDepth       int // persistent router channel depth (0 = default 64)
+
+	// dialFunc overrides transport.Dial for testing. Default: transport.Dial.
+	// Use WithDialer to inject a mock dialer for reconnect tests.
+	dialFunc func(ctx context.Context, addr string) (*transport.Conn, error)
 }
 
 // defaultConfig returns a sessionConfig with sensible defaults.
@@ -146,6 +150,7 @@ func defaultConfig() sessionConfig {
 		maxReconnectAttempts: 3,
 		reconnectBackoff:     1 * time.Second,
 		snackTimeout:         5 * time.Second,
+		dialFunc:             transport.Dial,
 	}
 }
 
@@ -234,5 +239,15 @@ func WithReconnectInfo(addr string, loginOpts ...login.LoginOption) SessionOptio
 	return func(c *sessionConfig) {
 		c.targetAddr = addr
 		c.loginOpts = loginOpts
+	}
+}
+
+// WithDialer overrides the dial function used for reconnection (ERL 0) and
+// connection replacement (ERL 2). Intended for testing with mock connections.
+// The function must return a *transport.Conn (use transport.NewConnFromNetConn
+// to wrap a net.Conn from net.Pipe).
+func WithDialer(f func(ctx context.Context, addr string) (*transport.Conn, error)) SessionOption {
+	return func(c *sessionConfig) {
+		c.dialFunc = f
 	}
 }
