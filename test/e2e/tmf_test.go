@@ -233,7 +233,7 @@ func TestTMF_TargetWarmReset(t *testing.T) {
 	}
 	defer sess2.Close()
 
-	inq, err := sess2.Inquiry(ctx, 0)
+	inq, err := sess2.SCSI().Inquiry(ctx, 0)
 	if err != nil {
 		t.Fatalf("Inquiry on new session after warm reset: %v", err)
 	}
