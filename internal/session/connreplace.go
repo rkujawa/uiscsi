@@ -54,7 +54,7 @@ func (s *Session) replaceConnection(cause error) error {
 	ctx, ctxCancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer ctxCancel()
 
-	newTc, err := s.cfg.dialFunc(ctx, s.targetAddr)
+	newTc, err := s.cfg.dialFunc(ctx, s.targetAddr, 0)
 	if err != nil {
 		return fmt.Errorf("session: ERL 2 dial failed: %w", err)
 	}

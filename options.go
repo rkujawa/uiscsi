@@ -19,12 +19,23 @@ type Option func(*dialConfig)
 type dialConfig struct {
 	loginOpts   []login.LoginOption
 	sessionOpts []session.SessionOption
+	dialTimeout time.Duration
 }
 
 // WithTarget sets the target IQN for login.
 func WithTarget(iqn string) Option {
 	return func(c *dialConfig) {
 		c.loginOpts = append(c.loginOpts, login.WithTarget(iqn))
+	}
+}
+
+// WithDialTimeout sets the TCP connection timeout for the initial dial.
+// This is independent of the context deadline — context controls the
+// overall operation, while dial timeout controls only the TCP handshake.
+// Default is 0 (no explicit timeout beyond context).
+func WithDialTimeout(d time.Duration) Option {
+	return func(c *dialConfig) {
+		c.dialTimeout = d
 	}
 }
 

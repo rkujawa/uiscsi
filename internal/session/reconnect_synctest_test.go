@@ -18,16 +18,16 @@ import (
 type mockDialer struct {
 	mu     sync.Mutex
 	calls  int
-	dialFn func(ctx context.Context, addr string) (*transport.Conn, error)
+	dialFn func(ctx context.Context, addr string, timeout time.Duration) (*transport.Conn, error)
 }
 
-func (m *mockDialer) Dial(ctx context.Context, addr string) (*transport.Conn, error) {
+func (m *mockDialer) Dial(ctx context.Context, addr string, timeout time.Duration) (*transport.Conn, error) {
 	m.mu.Lock()
 	m.calls++
 	fn := m.dialFn
 	m.mu.Unlock()
 	if fn != nil {
-		return fn(ctx, addr)
+		return fn(ctx, addr, timeout)
 	}
 	return nil, errors.New("mockDialer: no dialFn set")
 }
@@ -61,7 +61,7 @@ func TestReconnectSynctest(t *testing.T) {
 		// fake time past all backoff delays without real sleeps.
 		synctest.Test(t, func(t *testing.T) {
 			md := &mockDialer{
-				dialFn: func(ctx context.Context, addr string) (*transport.Conn, error) {
+				dialFn: func(ctx context.Context, addr string, timeout time.Duration) (*transport.Conn, error) {
 					return nil, errors.New("connection refused")
 				},
 			}
@@ -125,7 +125,7 @@ func TestReconnectSynctest(t *testing.T) {
 			release := make(chan struct{})
 
 			md := &mockDialer{
-				dialFn: func(ctx context.Context, addr string) (*transport.Conn, error) {
+				dialFn: func(ctx context.Context, addr string, timeout time.Duration) (*transport.Conn, error) {
 					// Block until the test releases us or ctx is cancelled.
 					select {
 					case <-release:
@@ -186,7 +186,7 @@ func TestReconnectSynctest(t *testing.T) {
 			var dialCalls int
 
 			md := &mockDialer{
-				dialFn: func(ctx context.Context, addr string) (*transport.Conn, error) {
+				dialFn: func(ctx context.Context, addr string, timeout time.Duration) (*transport.Conn, error) {
 					dialCalls++
 					// Always fail — we're testing the reconnect guard, not success.
 					return nil, errors.New("connection refused")

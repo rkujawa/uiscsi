@@ -311,7 +311,7 @@ func TestERL2ConnReplace(t *testing.T) {
 		go mock.serve(ctx)
 
 		// Dial and login.
-		tc, err := transport.Dial(ctx, mock.addr())
+		tc, err := transport.Dial(ctx, mock.addr(), 0)
 		if err != nil {
 			t.Fatalf("dial: %v", err)
 		}
@@ -372,7 +372,7 @@ func TestERL2ConnReplace(t *testing.T) {
 		defer mock.close()
 		go mock.serve(ctx)
 
-		tc, err := transport.Dial(ctx, mock.addr())
+		tc, err := transport.Dial(ctx, mock.addr(), 0)
 		if err != nil {
 			t.Fatalf("dial: %v", err)
 		}
@@ -419,7 +419,7 @@ func TestERL2ConnReplace(t *testing.T) {
 		defer mock.close()
 		go mock.serve(ctx)
 
-		tc, err := transport.Dial(ctx, mock.addr())
+		tc, err := transport.Dial(ctx, mock.addr(), 0)
 		if err != nil {
 			t.Fatalf("dial: %v", err)
 		}
@@ -452,7 +452,7 @@ func TestERL2ConnReplace(t *testing.T) {
 		defer mock.close()
 		go mock.serve(ctx)
 
-		tc, err := transport.Dial(ctx, mock.addr())
+		tc, err := transport.Dial(ctx, mock.addr(), 0)
 		if err != nil {
 			t.Fatalf("dial: %v", err)
 		}
@@ -503,7 +503,7 @@ func TestERL2ConnReplace(t *testing.T) {
 		defer mock.close()
 		go mock.serve(ctx)
 
-		tc, err := transport.Dial(ctx, mock.addr())
+		tc, err := transport.Dial(ctx, mock.addr(), 0)
 		if err != nil {
 			t.Fatalf("dial: %v", err)
 		}
@@ -563,7 +563,7 @@ func TestERL2ConnReplaceDataIntegrity(t *testing.T) {
 	defer mock.close()
 	go mock.serve(ctx)
 
-	tc, err := transport.Dial(ctx, mock.addr())
+	tc, err := transport.Dial(ctx, mock.addr(), 0)
 	if err != nil {
 		t.Fatalf("dial: %v", err)
 	}

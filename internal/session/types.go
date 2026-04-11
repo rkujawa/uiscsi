@@ -138,7 +138,7 @@ type sessionConfig struct {
 
 	// dialFunc overrides transport.Dial for testing. Default: transport.Dial.
 	// Use WithDialer to inject a mock dialer for reconnect tests.
-	dialFunc func(ctx context.Context, addr string) (*transport.Conn, error)
+	dialFunc func(ctx context.Context, addr string, timeout time.Duration) (*transport.Conn, error)
 }
 
 // defaultConfig returns a sessionConfig with sensible defaults.
@@ -150,7 +150,9 @@ func defaultConfig() sessionConfig {
 		maxReconnectAttempts: 3,
 		reconnectBackoff:     1 * time.Second,
 		snackTimeout:         5 * time.Second,
-		dialFunc:             transport.Dial,
+		dialFunc: func(ctx context.Context, addr string, timeout time.Duration) (*transport.Conn, error) {
+			return transport.Dial(ctx, addr, timeout)
+		},
 	}
 }
 
@@ -246,7 +248,7 @@ func WithReconnectInfo(addr string, loginOpts ...login.LoginOption) SessionOptio
 // connection replacement (ERL 2). Intended for testing with mock connections.
 // The function must return a *transport.Conn (use transport.NewConnFromNetConn
 // to wrap a net.Conn from net.Pipe).
-func WithDialer(f func(ctx context.Context, addr string) (*transport.Conn, error)) SessionOption {
+func WithDialer(f func(ctx context.Context, addr string, timeout time.Duration) (*transport.Conn, error)) SessionOption {
 	return func(c *sessionConfig) {
 		c.dialFunc = f
 	}

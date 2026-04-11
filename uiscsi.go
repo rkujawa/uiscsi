@@ -97,7 +97,7 @@ func Dial(ctx context.Context, addr string, opts ...Option) (*Session, error) {
 	}
 
 	// Step 1: TCP connect.
-	tc, err := transport.Dial(ctx, addr)
+	tc, err := transport.Dial(ctx, addr, cfg.dialTimeout)
 	if err != nil {
 		return nil, &TransportError{Op: "dial", Err: err}
 	}

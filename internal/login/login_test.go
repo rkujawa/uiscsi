@@ -347,7 +347,7 @@ func TestLoginAuthNone(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	tc, err := transport.Dial(ctx, addr)
+	tc, err := transport.Dial(ctx, addr, 0)
 	if err != nil {
 		t.Fatalf("dial: %v", err)
 	}
@@ -389,7 +389,7 @@ func TestLoginCHAP(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	tc, err := transport.Dial(ctx, addr)
+	tc, err := transport.Dial(ctx, addr, 0)
 	if err != nil {
 		t.Fatalf("dial: %v", err)
 	}
@@ -423,7 +423,7 @@ func TestLoginCHAPWrongPassword(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	tc, err := transport.Dial(ctx, addr)
+	tc, err := transport.Dial(ctx, addr, 0)
 	if err != nil {
 		t.Fatalf("dial: %v", err)
 	}
@@ -464,7 +464,7 @@ func TestLoginMutualCHAP(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	tc, err := transport.Dial(ctx, addr)
+	tc, err := transport.Dial(ctx, addr, 0)
 	if err != nil {
 		t.Fatalf("dial: %v", err)
 	}
@@ -501,7 +501,7 @@ func TestLoginMutualCHAPTargetAuthFail(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	tc, err := transport.Dial(ctx, addr)
+	tc, err := transport.Dial(ctx, addr, 0)
 	if err != nil {
 		t.Fatalf("dial: %v", err)
 	}
@@ -532,7 +532,7 @@ func TestLoginDigestNegotiation(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	tc, err := transport.Dial(ctx, addr)
+	tc, err := transport.Dial(ctx, addr, 0)
 	if err != nil {
 		t.Fatalf("dial: %v", err)
 	}
@@ -566,7 +566,7 @@ func TestLoginDigestBothCRC32C(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	tc, err := transport.Dial(ctx, addr)
+	tc, err := transport.Dial(ctx, addr, 0)
 	if err != nil {
 		t.Fatalf("dial: %v", err)
 	}
@@ -601,7 +601,7 @@ func TestLoginCustomOperationalParams(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	tc, err := transport.Dial(ctx, addr)
+	tc, err := transport.Dial(ctx, addr, 0)
 	if err != nil {
 		t.Fatalf("dial: %v", err)
 	}
@@ -633,7 +633,7 @@ func TestLoginTargetError(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	tc, err := transport.Dial(ctx, addr)
+	tc, err := transport.Dial(ctx, addr, 0)
 	if err != nil {
 		t.Fatalf("dial: %v", err)
 	}
@@ -678,7 +678,7 @@ func TestLoginContextCancellation(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
 	defer cancel()
 
-	tc, err := transport.Dial(ctx, ln.Addr().String())
+	tc, err := transport.Dial(ctx, ln.Addr().String(), 0)
 	if err != nil {
 		t.Fatalf("dial: %v", err)
 	}
@@ -720,7 +720,7 @@ func TestLoginStageTransitionLogging(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	tc, err := transport.Dial(ctx, addr)
+	tc, err := transport.Dial(ctx, addr, 0)
 	if err != nil {
 		t.Fatalf("dial: %v", err)
 	}
@@ -769,7 +769,7 @@ func TestLoginStageTransitionLoggingCHAP(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	tc, err := transport.Dial(ctx, addr)
+	tc, err := transport.Dial(ctx, addr, 0)
 	if err != nil {
 		t.Fatalf("dial: %v", err)
 	}

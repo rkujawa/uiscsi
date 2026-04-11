@@ -326,7 +326,7 @@ func connectAndLogin(t *testing.T, addr string) (*transport.Conn, *login.Negotia
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	tc, err := transport.Dial(ctx, addr)
+	tc, err := transport.Dial(ctx, addr, 0)
 	if err != nil {
 		t.Fatalf("dial: %v", err)
 	}

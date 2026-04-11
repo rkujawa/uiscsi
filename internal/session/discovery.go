@@ -149,7 +149,7 @@ func (s *Session) SendTargets(ctx context.Context) ([]DiscoveryTarget, error) {
 // a convenience function for one-shot target enumeration per design doc D-06.
 func Discover(ctx context.Context, addr string, opts ...login.LoginOption) ([]DiscoveryTarget, error) {
 	// Connect to target.
-	tc, err := transport.Dial(ctx, addr)
+	tc, err := transport.Dial(ctx, addr, 0)
 	if err != nil {
 		return nil, fmt.Errorf("discover: dial %s: %w", addr, err)
 	}

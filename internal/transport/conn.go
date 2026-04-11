@@ -39,9 +39,15 @@ func (c *Conn) DigestHeader() bool { return c.digestHeader }
 func (c *Conn) DigestData() bool { return c.digestData }
 
 // Dial connects to an iSCSI target at the given TCP address using the
-// provided context for timeout/cancellation control.
-func Dial(ctx context.Context, addr string) (*Conn, error) {
+// provided context for timeout/cancellation control. The timeout parameter
+// sets net.Dialer.Timeout independently of the context deadline — it
+// controls only the TCP handshake. A zero timeout means no explicit limit
+// beyond the context.
+func Dial(ctx context.Context, addr string, timeout time.Duration) (*Conn, error) {
 	d := net.Dialer{}
+	if timeout > 0 {
+		d.Timeout = timeout
+	}
 	nc, err := d.DialContext(ctx, "tcp", addr)
 	if err != nil {
 		return nil, err

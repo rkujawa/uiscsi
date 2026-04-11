@@ -21,7 +21,7 @@ func TestConnDial_Success(t *testing.T) {
 		}
 	}()
 
-	conn, err := Dial(context.Background(), ln.Addr().String())
+	conn, err := Dial(context.Background(), ln.Addr().String(), 0)
 	if err != nil {
 		t.Fatalf("Dial: %v", err)
 	}
@@ -42,7 +42,7 @@ func TestConnDial_CancelledContext(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel() // cancel before dialing
 
-	_, err = Dial(ctx, ln.Addr().String())
+	_, err = Dial(ctx, ln.Addr().String(), 0)
 	if err == nil {
 		t.Fatal("expected error with cancelled context")
 	}
@@ -62,7 +62,7 @@ func TestConnClose(t *testing.T) {
 		}
 	}()
 
-	conn, err := Dial(context.Background(), ln.Addr().String())
+	conn, err := Dial(context.Background(), ln.Addr().String(), 0)
 	if err != nil {
 		t.Fatalf("Dial: %v", err)
 	}
