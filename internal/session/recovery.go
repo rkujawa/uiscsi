@@ -42,6 +42,17 @@ func (s *Session) triggerReconnect(cause error) {
 		"erl", erl)
 	if erl >= 2 {
 		go func() {
+			// Ensure s.recovering is always cleared when the ERL 2 goroutine
+			// exits, as a safety net against future code paths that might
+			// return without going through reconnect(). reconnect() and a
+			// successful replaceConnection() each clear s.recovering themselves;
+			// this defer is a no-op in those cases (flag already false) but
+			// guarantees correctness if either path is skipped.
+			defer func() {
+				s.mu.Lock()
+				s.recovering = false
+				s.mu.Unlock()
+			}()
 			if err := s.replaceConnection(cause); err != nil {
 				s.cfg.logger.Error("session: ERL 2 connection replacement failed, falling back to ERL 0", "err", err)
 				s.reconnect(cause)
