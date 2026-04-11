@@ -126,6 +126,16 @@ func (s *Session) handleTargetRequestedLogout(evt AsyncEvent) {
 	ctx, cancel := context.WithTimeout(context.Background(), deadline)
 	defer cancel()
 
+	// Cancel the logout context early if the session is closed, so we don't
+	// keep trying to log out on a session that is shutting down.
+	go func() {
+		select {
+		case <-s.closed:
+			cancel()
+		case <-ctx.Done():
+		}
+	}()
+
 	if err := s.logout(ctx, 0); err != nil {
 		s.cfg.logger.Warn("session: target-requested logout failed", "error", err)
 	}
