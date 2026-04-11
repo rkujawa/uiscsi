@@ -186,10 +186,8 @@ func (s *Session) renegotiate(ctx context.Context) error {
 		return ctx.Err()
 	}
 
-	// Wait for TextResp.
-	timer := time.NewTimer(30 * time.Second)
-	defer timer.Stop()
-
+	// Wait for TextResp. The caller's ctx already carries the appropriate
+	// deadline (derived from Parameter3 seconds), so no separate timer is needed.
 	select {
 	case respRaw := <-respCh:
 		decoded, decErr := pdu.DecodeBHS(respRaw.BHS)
@@ -208,9 +206,6 @@ func (s *Session) renegotiate(ctx context.Context) error {
 			s.applyRenegotiatedParams(kvs)
 		}
 		return nil
-	case <-timer.C:
-		s.router.Unregister(itt)
-		return fmt.Errorf("renegotiate: TextResp timeout")
 	case <-ctx.Done():
 		s.router.Unregister(itt)
 		return ctx.Err()
