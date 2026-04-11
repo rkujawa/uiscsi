@@ -2,15 +2,64 @@ package login
 
 import "fmt"
 
+// AuthReason classifies authentication failure types for structured error
+// inspection via errors.As. It allows callers to distinguish CHAP validation
+// failures without parsing error message strings (D-07).
+type AuthReason uint8
+
+const (
+	// ReasonNone indicates no structured auth reason (non-CHAP login failures).
+	ReasonNone AuthReason = iota
+	// ReasonShortChallenge indicates the CHAP_C challenge is shorter than the
+	// minimum 16 bytes required by RFC 7143 best practices (RFC-05).
+	ReasonShortChallenge
+	// ReasonLowEntropy indicates the CHAP_C challenge has zero entropy
+	// (all bytes are 0x00), which is a potential downgrade attack (D-05).
+	ReasonLowEntropy
+	// ReasonBadResponse indicates the mutual CHAP target response did not
+	// match the expected value.
+	ReasonBadResponse
+	// ReasonUnsupportedAlgorithm indicates the target sent a CHAP_A value
+	// other than 5 (MD5), which is the only supported algorithm.
+	ReasonUnsupportedAlgorithm
+)
+
+// String returns the human-readable name of an AuthReason.
+func (r AuthReason) String() string {
+	switch r {
+	case ReasonNone:
+		return "none"
+	case ReasonShortChallenge:
+		return "short challenge"
+	case ReasonLowEntropy:
+		return "low entropy challenge"
+	case ReasonBadResponse:
+		return "bad mutual response"
+	case ReasonUnsupportedAlgorithm:
+		return "unsupported algorithm"
+	default:
+		return fmt.Sprintf("unknown reason %d", uint8(r))
+	}
+}
+
 // LoginError represents an iSCSI login failure with the status class and
 // detail from the Login Response PDU (RFC 7143 Section 11.13).
+// For CHAP validation failures (which occur before any PDU exchange), the
+// Reason field provides a structured failure classification (D-07).
 type LoginError struct {
 	StatusClass  uint8
 	StatusDetail uint8
 	Message      string
+	// Reason provides a structured classification of CHAP authentication
+	// failures. It is ReasonNone for non-CHAP login errors. Use errors.As
+	// to retrieve the *LoginError and inspect this field.
+	Reason AuthReason
 }
 
 func (e *LoginError) Error() string {
+	if e.Reason != ReasonNone {
+		return fmt.Sprintf("iscsi login: %s: %s", e.Reason, e.Message)
+	}
 	return fmt.Sprintf("iscsi login: class=%d detail=%d: %s", e.StatusClass, e.StatusDetail, e.Message)
 }
 

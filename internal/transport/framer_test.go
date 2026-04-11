@@ -487,6 +487,9 @@ func TestFramerReadRawPDU_HeaderDigestMismatchWithAHS(t *testing.T) {
 	}
 }
 
+// TestReadRawPDU_ExceedsMaxRecvDSL verifies D-08 behavior: incoming MRDSL violations
+// are logged as warnings but the PDU is still processed (not rejected).
+// This preserves interoperability with non-compliant targets.
 func TestReadRawPDU_ExceedsMaxRecvDSL(t *testing.T) {
 	rConn, wConn := net.Pipe()
 	defer rConn.Close()
@@ -501,13 +504,13 @@ func TestReadRawPDU_ExceedsMaxRecvDSL(t *testing.T) {
 		wConn.Write(data)
 	}()
 
-	// maxRecvDSL=512 should reject the PDU.
-	_, err := ReadRawPDU(rConn, false, false, 512)
-	if err == nil {
-		t.Fatal("expected error for dsLen exceeding maxRecvDSL")
+	// D-08: maxRecvDSL=512 should WARN but still process the PDU (not reject it).
+	raw, err := ReadRawPDU(rConn, false, false, 512)
+	if err != nil {
+		t.Fatalf("D-08: ReadRawPDU should warn but succeed for dsLen > maxRecvDSL, got error: %v", err)
 	}
-	if !bytes.Contains([]byte(err.Error()), []byte("exceeds MaxRecvDataSegmentLength")) {
-		t.Fatalf("unexpected error: %v", err)
+	if len(raw.DataSegment) != 1024 {
+		t.Fatalf("D-08: expected 1024-byte data segment, got %d", len(raw.DataSegment))
 	}
 }
 
@@ -531,5 +534,74 @@ func TestReadRawPDU_MaxRecvDSLZeroUnlimited(t *testing.T) {
 	}
 	if len(raw.DataSegment) != 64 {
 		t.Fatalf("expected 64-byte data segment, got %d", len(raw.DataSegment))
+	}
+}
+
+// TestValidateOutgoingSegmentLength verifies D-09: outgoing segments exceeding
+// the target's MRDSL are rejected with a *pdu.ProtocolError before hitting the wire.
+func TestValidateOutgoingSegmentLength(t *testing.T) {
+	tests := []struct {
+		name        string
+		dsLen       uint32
+		targetMRDSL uint32
+		wantErr     bool
+		wantKind    pdu.ViolationKind
+	}{
+		{
+			name:        "within limit",
+			dsLen:       512,
+			targetMRDSL: 1024,
+			wantErr:     false,
+		},
+		{
+			name:        "equal to limit",
+			dsLen:       1024,
+			targetMRDSL: 1024,
+			wantErr:     false,
+		},
+		{
+			name:        "exceeds limit",
+			dsLen:       1025,
+			targetMRDSL: 1024,
+			wantErr:     true,
+			wantKind:    pdu.MRDSLExceeded,
+		},
+		{
+			name:        "zero targetMRDSL means unlimited",
+			dsLen:       0x1000000,
+			targetMRDSL: 0,
+			wantErr:     false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := ValidateOutgoingSegmentLength(tt.dsLen, tt.targetMRDSL)
+			if tt.wantErr {
+				if err == nil {
+					t.Fatal("expected error, got nil")
+				}
+				var pe *pdu.ProtocolError
+				if !errors.As(err, &pe) {
+					t.Fatalf("expected *pdu.ProtocolError, got %T: %v", err, err)
+				}
+				if pe.Kind != tt.wantKind {
+					t.Errorf("Kind = %v, want %v", pe.Kind, tt.wantKind)
+				}
+				if pe.Got != tt.dsLen {
+					t.Errorf("Got = %d, want %d", pe.Got, tt.dsLen)
+				}
+				if pe.Limit != tt.targetMRDSL {
+					t.Errorf("Limit = %d, want %d", pe.Limit, tt.targetMRDSL)
+				}
+				if pe.Op != "validate" {
+					t.Errorf("Op = %q, want %q", pe.Op, "validate")
+				}
+			} else {
+				if err != nil {
+					t.Fatalf("unexpected error: %v", err)
+				}
+			}
+		})
 	}
 }

@@ -4,6 +4,8 @@ import (
 	"crypto/md5"
 	"encoding/base64"
 	"encoding/hex"
+	"errors"
+	"strings"
 	"testing"
 )
 
@@ -272,6 +274,167 @@ func TestCHAPExchangeUnsupportedAlgorithm(t *testing.T) {
 	_, err = cs.processChallenge(targetKeys)
 	if err == nil {
 		t.Error("processChallenge with unsupported algorithm should return error")
+	}
+}
+
+func TestCHAPShortChallenge(t *testing.T) {
+	cs, err := newCHAPState("user", "secret", false, "")
+	if err != nil {
+		t.Fatalf("newCHAPState: %v", err)
+	}
+
+	// 8 bytes = "0x" + 16 hex chars
+	shortChallenge := make([]byte, 8)
+	for i := range shortChallenge {
+		shortChallenge[i] = byte(i + 1) // non-zero so it's not low-entropy
+	}
+
+	keys := map[string]string{
+		"CHAP_A": "5",
+		"CHAP_I": "1",
+		"CHAP_C": encodeCHAPBinary(shortChallenge),
+	}
+
+	_, err = cs.processChallenge(keys)
+	if err == nil {
+		t.Fatal("processChallenge with short challenge should return error")
+	}
+
+	var le *LoginError
+	if !errors.As(err, &le) {
+		t.Fatalf("error is not *LoginError: %T %v", err, err)
+	}
+	if le.Reason != ReasonShortChallenge {
+		t.Errorf("LoginError.Reason = %v, want ReasonShortChallenge", le.Reason)
+	}
+}
+
+func TestCHAPAllZerosChallenge(t *testing.T) {
+	cs, err := newCHAPState("user", "secret", false, "")
+	if err != nil {
+		t.Fatalf("newCHAPState: %v", err)
+	}
+
+	// 16 bytes of all zeros
+	zeroChallenge := make([]byte, 16)
+
+	keys := map[string]string{
+		"CHAP_A": "5",
+		"CHAP_I": "1",
+		"CHAP_C": encodeCHAPBinary(zeroChallenge),
+	}
+
+	_, err = cs.processChallenge(keys)
+	if err == nil {
+		t.Fatal("processChallenge with all-zeros challenge should return error")
+	}
+
+	var le *LoginError
+	if !errors.As(err, &le) {
+		t.Fatalf("error is not *LoginError: %T %v", err, err)
+	}
+	if le.Reason != ReasonLowEntropy {
+		t.Errorf("LoginError.Reason = %v, want ReasonLowEntropy", le.Reason)
+	}
+}
+
+func TestCHAPValidChallenge(t *testing.T) {
+	cs, err := newCHAPState("user", "secret", false, "")
+	if err != nil {
+		t.Fatalf("newCHAPState: %v", err)
+	}
+
+	// 16 bytes of valid non-zero data
+	challenge := []byte{0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
+		0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0x10}
+
+	keys := map[string]string{
+		"CHAP_A": "5",
+		"CHAP_I": "42",
+		"CHAP_C": encodeCHAPBinary(challenge),
+	}
+
+	_, err = cs.processChallenge(keys)
+	if err != nil {
+		t.Errorf("processChallenge with valid 16-byte challenge returned error: %v", err)
+	}
+}
+
+func TestCHAPLongChallenge(t *testing.T) {
+	cs, err := newCHAPState("user", "secret", false, "")
+	if err != nil {
+		t.Fatalf("newCHAPState: %v", err)
+	}
+
+	// 32 bytes — longer than minimum is fine
+	challenge := make([]byte, 32)
+	for i := range challenge {
+		challenge[i] = byte(i + 1)
+	}
+
+	keys := map[string]string{
+		"CHAP_A": "5",
+		"CHAP_I": "42",
+		"CHAP_C": encodeCHAPBinary(challenge),
+	}
+
+	_, err = cs.processChallenge(keys)
+	if err != nil {
+		t.Errorf("processChallenge with valid 32-byte challenge returned error: %v", err)
+	}
+}
+
+func TestCHAPErrorNoSecretLeak(t *testing.T) {
+	cs, err := newCHAPState("user", "secret", false, "")
+	if err != nil {
+		t.Fatalf("newCHAPState: %v", err)
+	}
+
+	// 8-byte challenge that will fail length check
+	shortChallenge := []byte{0xDE, 0xAD, 0xBE, 0xEF, 0xCA, 0xFE, 0xBA, 0xBE}
+
+	keys := map[string]string{
+		"CHAP_A": "5",
+		"CHAP_I": "1",
+		"CHAP_C": encodeCHAPBinary(shortChallenge),
+	}
+
+	_, err = cs.processChallenge(keys)
+	if err == nil {
+		t.Fatal("processChallenge with short challenge should return error")
+	}
+
+	errMsg := err.Error()
+	// Error message must not contain the hex representation of the challenge bytes
+	challengeHex := "deadbeefcafebabe"
+	if strings.Contains(strings.ToLower(errMsg), challengeHex) {
+		t.Errorf("error message contains challenge bytes: %q", errMsg)
+	}
+}
+
+func TestCHAPUnsupportedAlgorithm(t *testing.T) {
+	cs, err := newCHAPState("user", "secret", false, "")
+	if err != nil {
+		t.Fatalf("newCHAPState: %v", err)
+	}
+
+	keys := map[string]string{
+		"CHAP_A": "6",
+		"CHAP_I": "1",
+		"CHAP_C": "0x0102030405060708090a0b0c0d0e0f10",
+	}
+
+	_, err = cs.processChallenge(keys)
+	if err == nil {
+		t.Fatal("processChallenge with unsupported algorithm should return error")
+	}
+
+	var le *LoginError
+	if !errors.As(err, &le) {
+		t.Fatalf("error is not *LoginError: %T %v", err, err)
+	}
+	if le.Reason != ReasonUnsupportedAlgorithm {
+		t.Errorf("LoginError.Reason = %v, want ReasonUnsupportedAlgorithm", le.Reason)
 	}
 }
 

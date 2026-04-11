@@ -12,6 +12,38 @@ import (
 	"strings"
 )
 
+// minCHAPChallengeLen is the minimum acceptable CHAP challenge length in bytes.
+// RFC 7143 best practices require at least 16 bytes to prevent rainbow table
+// and downgrade attacks (RFC-05).
+const minCHAPChallengeLen = 16
+
+// validateChallenge checks that a decoded CHAP challenge meets minimum security
+// requirements. It validates length (>= 16 bytes per RFC-05) and entropy (not
+// all-zeros per D-05). Error messages never include challenge bytes (D-07).
+func validateChallenge(challenge []byte) error {
+	if len(challenge) < minCHAPChallengeLen {
+		return &LoginError{
+			Message: fmt.Sprintf("CHAP challenge too short (%d bytes, minimum %d)", len(challenge), minCHAPChallengeLen),
+			Reason:  ReasonShortChallenge,
+		}
+	}
+	// Entropy check: reject all-zeros (obvious downgrade attack indicator per D-05).
+	allZero := true
+	for _, b := range challenge {
+		if b != 0 {
+			allZero = false
+			break
+		}
+	}
+	if allZero {
+		return &LoginError{
+			Message: "CHAP challenge has zero entropy (all bytes are 0x00)",
+			Reason:  ReasonLowEntropy,
+		}
+	}
+	return nil
+}
+
 // chapResponse computes the CHAP response per RFC 1994 Section 4.1:
 // MD5(id_byte || secret_bytes || challenge_bytes).
 // The id is a single byte, not a multi-byte integer.
@@ -93,7 +125,10 @@ func (cs *chapState) processChallenge(keys map[string]string) (map[string]string
 		return nil, fmt.Errorf("chap: missing CHAP_A key")
 	}
 	if algo != "5" {
-		return nil, fmt.Errorf("chap: unsupported algorithm CHAP_A=%s (only MD5/5 is supported)", algo)
+		return nil, &LoginError{
+			Message: fmt.Sprintf("unsupported CHAP algorithm CHAP_A=%s (only MD5/5 supported)", algo),
+			Reason:  ReasonUnsupportedAlgorithm,
+		}
 	}
 
 	// Parse CHAP_I as decimal integer, take low byte as id.
@@ -115,6 +150,9 @@ func (cs *chapState) processChallenge(keys map[string]string) (map[string]string
 	challenge, err := decodeCHAPBinary(cStr)
 	if err != nil {
 		return nil, fmt.Errorf("chap: failed to decode CHAP_C: %w", err)
+	}
+	if err := validateChallenge(challenge); err != nil {
+		return nil, err
 	}
 
 	// Compute response = MD5(id || secret || challenge).
@@ -151,7 +189,10 @@ func (cs *chapState) verifyMutualResponse(keys map[string]string) error {
 	expected := chapResponse(cs.initiatorID, []byte(cs.mutualSecret), cs.initiatorChallenge)
 
 	if subtle.ConstantTimeCompare(targetResp, expected[:]) != 1 {
-		return fmt.Errorf("chap: mutual authentication failed: target response mismatch")
+		return &LoginError{
+			Message: "mutual CHAP authentication failed: target response mismatch",
+			Reason:  ReasonBadResponse,
+		}
 	}
 
 	return nil

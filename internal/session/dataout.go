@@ -61,6 +61,15 @@ func (t *task) sendDataOutBurst(writeCh chan<- *transport.RawPDU,
 			return sent, fmt.Errorf("session: encode DataOut: %w", encErr)
 		}
 
+		// D-09: Defense-in-depth check — ensure the data segment does not exceed
+		// the target's MaxRecvDataSegmentLength before putting it on the wire.
+		// chunkSize is already bounded by min(maxRecvDSL, ...) above, so this
+		// should never trigger in practice, but guards against programmer error.
+		if valErr := transport.ValidateOutgoingSegmentLength(uint32(n), maxRecvDSL); valErr != nil {
+			transport.PutBuffer(bufBp)
+			return sent, fmt.Errorf("session: outgoing Data-Out validation: %w", valErr)
+		}
+
 		// Copy data out of the pool buffer before crossing the goroutine boundary.
 		// WriteRawPDU (called by WritePump) will copy DataSegment into its own
 		// pool buffer, so dsData only needs to live until that copy completes.

@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
+	"log/slog"
 
 	"github.com/uiscsi/uiscsi/internal/digest"
 	"github.com/uiscsi/uiscsi/internal/pdu"
@@ -47,9 +48,24 @@ func ReadRawPDU(r io.Reader, digestHeader, digestData bool, maxRecvDSL uint32, d
 	ahsLen := uint32(raw.BHS[4]) * 4 // TotalAHSLength is in 4-byte words
 	dsLen := uint32(raw.BHS[5])<<16 | uint32(raw.BHS[6])<<8 | uint32(raw.BHS[7])
 
-	// Enforce MaxRecvDataSegmentLength to prevent memory exhaustion.
+	// RFC-01: Defense-in-depth guard against impossibly large segment lengths.
+	// dsLen is decoded from 3 bytes so it cannot actually exceed 0xFFFFFF, but
+	// this guard documents the invariant explicitly.
+	if dsLen > 0xFFFFFF {
+		return nil, &pdu.ProtocolError{
+			Kind:   pdu.OversizedSegment,
+			Op:     "decode",
+			Detail: fmt.Sprintf("data segment length %d exceeds 24-bit maximum", dsLen),
+			Got:    dsLen,
+			Limit:  0xFFFFFF,
+		}
+	}
+
+	// D-08: Log a warning if incoming PDU exceeds negotiated MaxRecvDataSegmentLength,
+	// but continue processing for interoperability with non-compliant targets.
 	if maxRecvDSL > 0 && dsLen > maxRecvDSL {
-		return nil, fmt.Errorf("transport: data segment length %d exceeds MaxRecvDataSegmentLength %d", dsLen, maxRecvDSL)
+		slog.Warn("incoming PDU exceeds negotiated MaxRecvDataSegmentLength",
+			"dsLen", dsLen, "maxRecvDSL", maxRecvDSL)
 	}
 
 	// Stage 3: Compute total remaining bytes after BHS.
@@ -206,4 +222,24 @@ func WriteRawPDU(w io.Writer, p *RawPDU, digestByteOrder ...binary.ByteOrder) er
 
 	_, err := w.Write(buf[:off])
 	return err
+}
+
+// ValidateOutgoingSegmentLength checks that the outgoing data segment does not
+// exceed the target's negotiated MaxRecvDataSegmentLength. Returns a
+// *pdu.ProtocolError with Kind=MRDSLExceeded if the segment is too large.
+//
+// Per D-09: fail fast before sending — outgoing PDUs that would violate the
+// target's MRDSL are rejected here, not silently truncated or sent.
+// A targetMRDSL of 0 means unlimited (no check performed).
+func ValidateOutgoingSegmentLength(dsLen, targetMRDSL uint32) error {
+	if targetMRDSL > 0 && dsLen > targetMRDSL {
+		return &pdu.ProtocolError{
+			Kind:   pdu.MRDSLExceeded,
+			Op:     "validate",
+			Detail: fmt.Sprintf("outgoing data segment %d exceeds target MaxRecvDataSegmentLength %d", dsLen, targetMRDSL),
+			Got:    dsLen,
+			Limit:  targetMRDSL,
+		}
+	}
+	return nil
 }
