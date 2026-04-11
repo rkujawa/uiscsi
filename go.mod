@@ -2,4 +2,4 @@ module github.com/uiscsi/uiscsi
 
 go 1.25
 
-require go.uber.org/goleak v1.3.0
+require go.uber.org/goleak v1.3.0 // test-only: goroutine leak detection in TestMain

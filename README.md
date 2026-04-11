@@ -230,4 +230,5 @@ All test suites run with `-race` and [goleak](https://github.com/uber-go/goleak)
 
 - Go 1.25 or later
 - No external runtime dependencies (stdlib only)
+- Tests require [goleak](https://github.com/uber-go/goleak) for goroutine leak detection (test-only; not imported by library code)
 - E2E tests require Linux with `target_core_mod` and `iscsi_target_mod` kernel modules
