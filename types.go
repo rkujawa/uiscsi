@@ -143,13 +143,15 @@ type Capacity struct {
 
 // SenseInfo holds parsed sense data.
 type SenseInfo struct {
-	Key         uint8
-	ASC         uint8
-	ASCQ        uint8
-	Description string
-	Filemark    bool
-	EOM         bool
-	ILI         bool
+	Key              uint8
+	ASC              uint8
+	ASCQ             uint8
+	Description      string
+	Filemark         bool
+	EOM              bool
+	ILI              bool
+	Information      uint64 // INFORMATION field from sense data; 0 if not present
+	InformationValid bool   // true when VALID bit was set in sense data
 }
 
 // TMFResult carries a task management function outcome.
@@ -246,13 +248,15 @@ func convertCapacity10(r *scsi.ReadCapacity10Response) *Capacity {
 // convertSense converts internal SenseData to a public SenseInfo.
 func convertSense(sd *scsi.SenseData) *SenseInfo {
 	return &SenseInfo{
-		Key:         uint8(sd.Key),
-		ASC:         sd.ASC,
-		ASCQ:        sd.ASCQ,
-		Description: sd.String(),
-		Filemark:    sd.Filemark,
-		EOM:         sd.EOM,
-		ILI:         sd.ILI,
+		Key:              uint8(sd.Key),
+		ASC:              sd.ASC,
+		ASCQ:             sd.ASCQ,
+		Description:      sd.String(),
+		Filemark:         sd.Filemark,
+		EOM:              sd.EOM,
+		ILI:              sd.ILI,
+		Information:      sd.Information,
+		InformationValid: sd.Valid,
 	}
 }
 
