@@ -172,13 +172,13 @@ sess, err := uiscsi.Dial(ctx, addr,
 ```go
 sess, err := uiscsi.Dial(ctx, addr,
     uiscsi.WithTarget(iqn),
-    uiscsi.WithStateChangeHook(func(old, new uiscsi.SessionState) {
-        log.Printf("session state: %s -> %s", old, new)
+    uiscsi.WithStateChangeHook(func(state uiscsi.SessionState) {
+        log.Printf("session state: %s", state)
     }),
 )
 ```
 
-States: `StateLogin`, `StateFullFeature`, `StateRecovery`, `StateClosed`.
+States: `SessionLogin`, `SessionFullFeature`, `SessionReconnecting`, `SessionClosed`.
 
 ### PDU Hook
 
