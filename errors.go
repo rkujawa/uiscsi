@@ -6,7 +6,13 @@ import (
 
 	"github.com/uiscsi/uiscsi/internal/login"
 	"github.com/uiscsi/uiscsi/internal/scsi"
+	"github.com/uiscsi/uiscsi/internal/session"
 )
+
+// ErrSessionDraining is returned by command submission methods when a
+// [Session.Drain] is in progress. Callers can use [errors.Is] to
+// distinguish drain rejection from other errors.
+var ErrSessionDraining = session.ErrSessionDraining
 
 // SCSIError represents a SCSI command failure with status and optional sense data.
 type SCSIError struct {

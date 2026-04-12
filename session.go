@@ -40,6 +40,19 @@ func (s *Session) Close() error {
 	return s.s.Close()
 }
 
+// Drain waits for all in-flight commands to complete, then prevents new
+// submissions. Use Drain before Close for a composable graceful shutdown:
+//
+//	sess.Drain(ctx)  // wait for in-flight work
+//	sess.Close()     // tear down connection
+//
+// While draining, new Submit and SubmitStreaming calls return
+// [ErrSessionDraining]. Concurrent Drain calls also return
+// ErrSessionDraining without blocking.
+func (s *Session) Drain(ctx context.Context) error {
+	return s.s.Drain(ctx)
+}
+
 // SCSI returns the typed SCSI command interface.
 func (s *Session) SCSI() *SCSIOps { return &s.scsi }
 
